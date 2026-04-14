@@ -154,12 +154,13 @@ function hasCheat(ctx, name) {
 function isStepAcceptable(c, tc, tr, ctx) {
   if (tc < 0 || tc >= ctx.level.w || tr < 0 || tr >= ctx.level.h) return false;
   const tile = ctx.level.at(tc, tr);
-  const isWater = tile === TILE_TYPES.WATER;
+  // SWIM cheat lets chump cross both water (W3) and lava (W5).
+  const isLiquid = tile === TILE_TYPES.WATER || tile === TILE_TYPES.LAVA;
 
-  if (isWater) {
+  if (isLiquid) {
     if (!hasCheat(ctx, CHEATS.SWIM)) return false;
-    // swim makes water passable — skip the isWalkable check which would
-    // reject water because it's in SOLID.
+    // swim makes liquid passable — skip the isWalkable check which would
+    // reject it because water/lava are in SOLID.
   } else if (!ctx.level.isWalkable(tc, tr)) {
     return false;
   }
@@ -318,7 +319,9 @@ function maybeThrowEgg(c, ctx) {
   if (dist < 2 || dist > 7) return;
   c.facing = facingFromTo(c.col, c.row, player.col, player.row);
   c.eggCooldown = 40 + rng.int(0, 20);
-  hooks.spawnEgg?.(c.col, c.row, player.col, player.row);
+  // World-level flag: W5 makes every thrown egg a flaming egg.
+  const fiery = ctx.flamingEggs === true;
+  hooks.spawnEgg?.(c.col, c.row, player.col, player.row, fiery);
   hooks.sayEgg?.(c);
 }
 

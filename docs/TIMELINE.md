@@ -2,6 +2,54 @@
 
 > Chronological log of what has shipped. Newest first. Format: `YYYY-MM-DD — [Milestone] — summary`.
 
+## 2026-04-14 — M12 — The Volcano (World 5) + final victory
+
+- `world/level.js` — W5 tile types: ASH, OBSIDIAN, LAVA, MAGMA_ROCK, VOLCANO_PEAK, STONE_HUT, SHRINE, CAULDRON, CRYSTAL, LOOKOUT, FORGE. Lava added to SOLID (player can't cross) but chicken.js `isStepAcceptable` treats LAVA the same as WATER so SWIM carries chump over molten rock.
+- `world/volcano.js` — new world module. 20×15 ash slopes with lava rivers carving through the middle, smoking peak across the top, magma rocks walling the west. 7 buildings (Shrine, Magma Forge, Crystal Cluster, Lookout Tower, Cauldron, 2 Stone Huts). All four cheats enabled (`dodge`, `teleport`, `swim`, `clone`). Catches=3, planTimer=280, chaseTimer=900, cutsceneScript='VOLCANO_VICTORY'. New world flags: `fallingRocks=true`, `flamingEggs=true`.
+- `world/index.js` — volcano registered at slot 5, `exists: true` on WORLD_ORDER.
+- `render/tiles.js` + `render/bake.js` + `render/renderer.js` — 11 new procedural tile draw functions (drawAsh / drawObsidian / drawLava / drawMagmaRock / drawVolcanoPeak / drawStoneHut / drawShrine / drawCauldron / drawCrystal / drawLookout / drawForge), all baked into the sprite cache and wired into the renderer TILE_KEY.
+- `entities/projectile.js` — `createEgg(..., fiery)` second flag. New `createRock(tc, tr)` for falling hazards with their own straight-drop pixel path.
+- `entities/chicken.js` — `maybeThrowEgg` reads `ctx.flamingEggs` to upgrade throws into fiery eggs. LAVA treated as swimmable in isStepAcceptable.
+- `main.js` — new `tickFallingRocks(g)` spawns rocks from the peak while `worldDef.fallingRocks` is on (cadence faster during FINAL FORM). Rock landings damage player (8t stun) and deal 1 damage to buildings on the target tile. `chumpHooks.spawnEgg` forwards the `fiery` flag. tickChump ctx now carries `flamingEggs`. Pickup-spawn walkable check extended with ASH / OBSIDIAN / DOCK / PIER / CASTLE_FLOOR. Rock timer reset in loadWorld. SCORE state accepts **R** to replay the volcano on final victory.
+- `render/renderer.js` — `drawProjectiles` now renders 3 kinds: plain egg, fiery egg (orange/yellow glow halo), and rock (dark chunk + growing red reticle shadow on the target tile).
+- `systems/cutscene.js` — `VOLCANO_VICTORY` script (240 ticks, 6 captions: cornered → unfair catch → going home → TOWN SAVED → orange chicken delivered → credits).
+- `render/cutscene.js` — `drawVolcanoVictory` choreography: player pixel sprite walks in from the left, lunges, hoists chump overhead with a rope line, caldera erupts in confetti. Own volcano background + heat shimmer + stars. Routed through `drawCutscene` dispatcher.
+- `systems/save.js` — `gameComplete` + `clears` flags added to DEFAULT_SAVE. `recordRun` flips `gameComplete=true` and bumps `clears` when W5 is cleared.
+- `render/menu.js` — score screen shows **GAME COMPLETE** / "chump delivered — the town is saved" in yellow on W5 victory + "ENTER for menu  R to PLAY AGAIN" hint. Footer on title screen switches to "ALL WORLDS CLEARED — chump captured x N" once the game is beaten.
+
+## 2026-04-14 — M11 — Castle Town (W4), Cat Decoy trap + Clone cheat
+
+- `world/castle.js` — Maze-like castle interior on top (throne, crown room, kitchen, armory) with a village below (houses, inn) and a player-target catapult outside. 3 catches, 6 trap slots.
+- `world/level.js` — W4 tile types: CASTLE_WALL, CASTLE_FLOOR, THRONE, CROWN_ROOM, KITCHEN, ARMORY, INN, VILLAGE_HOUSE, CATAPULT.
+- `render/tiles.js` + `bake.js` + `renderer.js` — procedural tile art for all 9 W4 tiles.
+- `entities/trap.js` — `CAT_DECOY` added. In main.js it drops a real cat pickup so the existing chase-cat priority handles it (mandatory override even in Final Form).
+- `entities/chicken.js` — Clone cheat: on teleport, optionally leaves a fading decoy at the origin tile. `game.decoys` array + `renderer.drawDecoys` renders them with a lavender tint.
+- `systems/cutscene.js` + `render/cutscene.js` — CASTLE_ESCAPE script + farm-style dispatch path.
+
+## 2026-04-14 — M10 — The Docks (W3), water + Swim cheat, Pretty Hen + Burger Bait
+
+- `world/docks.js` — Harbor with water tiles blocking the player, pier/dock walkable stone, lighthouse (2x2 load-bearing base + cosmetic top), boats, fish market, crane. 3 catches.
+- `world/level.js` — WATER, PIER, DOCK, BOAT, WAREHOUSE, FISH_MARKET, LIGHTHOUSE_T/B, CARGO, NET_STACK, CRANE. WATER in SOLID so player can't step; chump's SWIM cheat bypasses via isStepAcceptable.
+- `entities/chicken.js` — SWIM cheat honored. PRETTY_HEN + BURGER_BAIT as new lure traps (long flirt lock / bait reveal stun).
+- `entities/trap.js` — PRETTY_HEN, BURGER_BAIT added to TRAP_TYPES + LURE_TRAPS + TRAP_STUN. Player `burgerBait` inventory from W1 carries in as a placeable trap here.
+- Docks escape cutscene (speedboat donuts) via DOCKS_ESCAPE script in the farm-style renderer.
+
+## 2026-04-14 — M9 — The Market (W2), Glue + Corn Decoy + Dodge + Teleport
+
+- `world/index.js` — world registry interface. All worlds export the same shape (createLevel/createBuildings/createTownies + metadata).
+- `world/market.js` — Cobblestone plaza with fountain, bakery, restaurant, clock tower (2-tile), fruit stand, 3 carts, flower shop. 2 catches.
+- `entities/trap.js` — GLUE (stun 50) and CORN_DECOY (lure 50) added.
+- `entities/chicken.js` — **Dodge** cheat: chance to sidestep passive traps on step. **Teleport** cheat: when cornered / high rage / player adjacent, blink to a random 3-6 tile away landing. `onTeleport` hook spawns sparkles + bubble.
+- `render/cutscene.js` — bespoke `drawMarketStyleEscape`: chump kicks fruit stand → orange tidal wave rises from his goo trail → he surfs the crest yelling COWABUNGA → crashes off screen right.
+
+## 2026-04-14 — M8 — Menu, escape cutscene, score screen, save state
+
+- `render/menu.js` — title screen + world-select list driven by save.worldsUnlocked + drawScore overlay.
+- `systems/save.js` — localStorage persistence with graceful degradation, scoreRun heuristic, recordRun advances unlocked worlds and records best stats.
+- `systems/cutscene.js` + `render/cutscene.js` — cutscene state machine + FARM_ESCAPE choreography (stand → backflip → moonwalk → dab → sprint off).
+- `main.js` — MENU / PLAN / CHASE / GOTCHA / ESCAPE_CUTSCENE / SCORE top-level state machine, save roundtrip, run-stats snapshot on catch.
+- `tools/smoke.mjs` — headless node smoke test covering AI, pickups, cutscene, save roundtrip, cheat teleport firing, and world registry shape.
+
 ## 2026-04-14 — M7 — Taco truck, pickups (cat/burger/taco), townspeople NPCs
 
 - `entities/pickup.js` — cat/burger/taco pickups with idle/tossed/dizzy/gone state machine, 30s self-despawn, parabolic toss arc for cats

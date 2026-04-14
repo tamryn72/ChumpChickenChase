@@ -112,7 +112,11 @@ export function drawMenu(ctx, game, save) {
   }
   ctx.fillStyle = P.darkGrey;
   ctx.font = '9px ui-monospace, monospace';
-  ctx.fillText(`worlds unlocked: ${save.worldsUnlocked} / 5`, CANVAS_W / 2, CANVAS_H - 18);
+  const unlocked = Math.min(5, save.worldsUnlocked);
+  const footer = save.gameComplete
+    ? `ALL WORLDS CLEARED — chump captured x${save.clears || 1}`
+    : `worlds unlocked: ${unlocked} / 5`;
+  ctx.fillText(footer, CANVAS_W / 2, CANVAS_H - 18);
 
   // credit
   ctx.textAlign = 'left';
@@ -132,19 +136,24 @@ export function drawScore(ctx, game) {
   ctx.textBaseline = 'middle';
 
   const won = game.result === 'won';
+  const finalVictory = won && game.worldNum === 5;
 
   ctx.font = 'bold 28px ui-monospace, monospace';
+  let title;
+  if (finalVictory) title = 'GAME COMPLETE';
+  else if (won)     title = `${game.worldName || 'WORLD'} SAVED`;
+  else              title = `${game.worldName || 'WORLD'} LOST`;
   ctx.fillStyle = P.black;
-  const title = won ? `${game.worldName || 'WORLD'} SAVED` : `${game.worldName || 'WORLD'} LOST`;
   ctx.fillText(title.toUpperCase(), CANVAS_W / 2 + 2, 48 + 2);
-  ctx.fillStyle = won ? P.green : P.red;
+  ctx.fillStyle = finalVictory ? P.yellow : (won ? P.green : P.red);
   ctx.fillText(title.toUpperCase(), CANVAS_W / 2, 48);
 
   ctx.font = '10px ui-monospace, monospace';
   ctx.fillStyle = P.lightGrey;
-  const sub = won
-    ? 'chump escaped — for now'
-    : 'chump has declared victory';
+  let sub;
+  if (finalVictory) sub = 'chump delivered — the town is saved';
+  else if (won)     sub = 'chump escaped — for now';
+  else              sub = 'chump has declared victory';
   ctx.fillText(sub, CANVAS_W / 2, 70);
 
   const s = game.resultStats || {};
@@ -182,6 +191,7 @@ export function drawScore(ctx, game) {
   if (Math.floor(game.tick / 12) % 2 === 0) {
     ctx.fillStyle = P.yellow;
     ctx.font = 'bold 12px ui-monospace, monospace';
-    ctx.fillText('ENTER to continue', CANVAS_W / 2, CANVAS_H - 22);
+    const hint = finalVictory ? 'ENTER for menu  R to PLAY AGAIN' : 'ENTER to continue';
+    ctx.fillText(hint, CANVAS_W / 2, CANVAS_H - 22);
   }
 }

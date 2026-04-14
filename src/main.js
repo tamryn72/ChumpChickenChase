@@ -20,7 +20,7 @@ import {
 } from './entities/chicken.js';
 import { createTrap, TRAP_TYPES, findTrapAt } from './entities/trap.js';
 import { destroyBuilding, allBuildingsDestroyed } from './entities/building.js';
-import { createEgg, tickProjectile } from './entities/projectile.js';
+import { createEgg, createRock, tickProjectile } from './entities/projectile.js';
 import {
   createPickup, tickPickup, pickupAt, PICKUP_TYPES,
 } from './entities/pickup.js';
@@ -81,6 +81,7 @@ const game = {
   decoys: [],
   townies: [],
   pickupTimers: { taco: 120, burger: 180, cat: 240 },
+  rockTimer: 60,
   shake: 0,
   planTimer: 0,
   chaseTimer: 0,
@@ -121,6 +122,7 @@ function loadWorld(num) {
   game.pickups.length = 0;
   game.decoys.length = 0;
   game.pickupTimers = { taco: 120, burger: 180, cat: 240 };
+  game.rockTimer = 60;
   game.shake = 0;
   game.planTimer     = def.planTimer;
   game.chaseTimer    = def.chaseTimer;
@@ -210,8 +212,8 @@ const chumpHooks = {
     say(game.bubbles, c, 'DEMOLISHED', 'destroy', 20, 30);
     game.shake = Math.max(game.shake, 8);
   },
-  spawnEgg: (fc, fr, tc, tr) => {
-    game.projectiles.push(createEgg(fc, fr, tc, tr));
+  spawnEgg: (fc, fr, tc, tr, fiery = false) => {
+    game.projectiles.push(createEgg(fc, fr, tc, tr, fiery));
   },
   sayEgg: (c) => say(game.bubbles, c, game.rng.pick(EGG_BUBBLES), 'egg', 40, 22),
   onFinalForm: (c) => {
@@ -386,7 +388,9 @@ function spawnPickup(g, type) {
     if (!g.level.isWalkable(c, r)) continue;
     const tile = g.level.at(c, r);
     // walkable floor types across worlds
-    const ok = tile === T.GRASS || tile === T.DIRT || tile === T.RUBBLE || tile === T.COBBLE;
+    const ok = tile === T.GRASS || tile === T.DIRT || tile === T.RUBBLE
+            || tile === T.COBBLE || tile === T.DOCK || tile === T.PIER
+            || tile === T.CASTLE_FLOOR || tile === T.ASH || tile === T.OBSIDIAN;
     if (!ok) continue;
     if (pickupAt(g.pickups, c, r)) continue;
     if (manhattan({ col: c, row: r }, g.player) < 3) continue;
@@ -423,20 +427,76 @@ function tickProjectiles(g) {
     const p = g.projectiles[i];
     const done = tickProjectile(p);
     if (!done) continue;
+
+    if (p.kind === 'rock') {
+      // Falling rocks: area-damage the target tile. Player within 1 tile
+      // gets stunned. Also damages any building on that tile (1hp).
+      const d = Math.abs(g.player.col - p.targetCol) + Math.abs(g.player.row - p.targetRow);
+      addDebrisBurst(g.particles, p.targetCol, p.targetRow, g.rng, 10);
+      g.shake = Math.max(g.shake, 10);
+      if (d <= 1 && g.player.stunTicks === 0) {
+        g.player.stunTicks = 8;
+        g.shake = Math.max(g.shake, 18);
+        g.stats.eggsHit += 1;
+        say(g.bubbles, g.player, 'ROCK', 'rock_hit', 20, 16);
+      }
+      // rock damages adjacent buildings
+      for (const b of g.buildings) {
+        if (b.hp <= 0) continue;
+        for (const [bc, br] of b.tiles) {
+          if (bc === p.targetCol && br === p.targetRow) {
+            b.hp -= 1;
+            if (b.hp <= 0) {
+              chumpHooks.onDestroy(g.chump, b);
+            }
+            break;
+          }
+        }
+      }
+      g.projectiles.splice(i, 1);
+      continue;
+    }
+
+    // eggs
     const d = Math.abs(g.player.col - p.targetCol) + Math.abs(g.player.row - p.targetRow);
+    const fiery = p.kind === 'egg_fiery';
     if (d <= 1 && g.player.stunTicks === 0) {
-      g.player.stunTicks = 5;
-      g.shake = Math.max(g.shake, 14);
+      g.player.stunTicks = fiery ? 8 : 5;
+      g.shake = Math.max(g.shake, fiery ? 18 : 14);
       addRage(g.chump, 5);
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
       g.stats.eggsHit += 1;
-      say(g.bubbles, g.chump, 'DIRECT HIT', 'egg_hit', 20, 22);
+      say(g.bubbles, g.chump, fiery ? 'ROAST' : 'DIRECT HIT', 'egg_hit', 20, 22);
     } else {
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
       g.stats.eggsDodged += 1;
     }
     g.projectiles.splice(i, 1);
   }
+}
+
+// --- falling rocks (W5) ---
+function tickFallingRocks(g) {
+  g.rockTimer -= 1;
+  if (g.rockTimer > 0) return;
+  // cadence: faster when chump is enraged
+  const base = g.chump.finalForm > 0 ? 35 : 70;
+  g.rockTimer = base + g.rng.int(0, 20);
+
+  // pick a target tile — 50/50 bias toward the player, otherwise random
+  let tc, tr;
+  if (g.rng.chance(0.55) && g.player) {
+    tc = Math.max(1, Math.min(g.level.w - 2, g.player.col + g.rng.int(-2, 2)));
+    tr = Math.max(1, Math.min(g.level.h - 2, g.player.row + g.rng.int(-2, 2)));
+  } else {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const c = g.rng.int(1, g.level.w - 2);
+      const r = g.rng.int(1, g.level.h - 2);
+      if (g.level.isWalkable(c, r)) { tc = c; tr = r; break; }
+    }
+  }
+  if (tc === undefined) return;
+  g.projectiles.push(createRock(tc, tr));
 }
 
 // --- tick routing by state ---
@@ -495,11 +555,13 @@ function tick(g) {
       pickups: g.pickups,
       player: g.player,
       cheats: g.worldDef?.cheats || [],
+      flamingEggs: g.worldDef?.flamingEggs === true,
     });
 
     for (const n of g.townies) tickTownie(n, g.level, g.rng, g.chump);
 
     tickPickups(g);
+    if (g.worldDef?.fallingRocks) tickFallingRocks(g);
     tickProjectiles(g);
     // decoys decay
     for (let i = g.decoys.length - 1; i >= 0; i--) {
@@ -557,6 +619,10 @@ function tick(g) {
   } else if (g.state === 'SCORE') {
     if (input.wasPressed('Enter')) {
       game.state = 'MENU';
+    }
+    // On the final victory, R replays W5 immediately.
+    if (g.worldNum === 5 && g.result === 'won' && input.wasPressed('KeyR')) {
+      loadWorld(5);
     }
   }
 

@@ -110,14 +110,14 @@ Goal: load Farm tilemap, move player around, see something on a real canvas.
 - [ ] Crown sprite swap
 - [ ] W4 escape cutscene (catapult → hay cart → "FREEDOM")
 
-## M12 — The Volcano (W5) & ending
+## M12 — The Volcano (W5) & ending  *(shipped)*
 
-- [ ] Lava tiles
-- [ ] Falling rocks
-- [ ] Flaming eggs
-- [ ] Swim-through-lava cheat (W5 only)
-- [ ] Final catch → victory cutscene
-- [ ] Final score screen + PLAY AGAIN
+- [x] Lava tiles (solid for player, passable for chump via SWIM)
+- [x] Falling rocks — peak hazard, area-stuns player, damages buildings
+- [x] Flaming eggs — W5 egg variant, longer stun + bigger shake + glow halo
+- [x] Swim-through-lava cheat (SWIM now covers WATER + LAVA)
+- [x] Final catch → `VOLCANO_VICTORY` cutscene (player hoists chump, confetti)
+- [x] Final **GAME COMPLETE** score screen + R to PLAY AGAIN
 
 ## M13 — Polish pass
 
