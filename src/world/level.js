@@ -42,6 +42,17 @@ export const TILE_TYPES = {
   CARGO:       48,
   NET_STACK:   49,
   CRANE:       50,
+
+  // --- W4 Castle Town ---
+  CASTLE_WALL:  60,  // solid indestructible masonry
+  CASTLE_FLOOR: 61,  // walkable interior stone
+  THRONE:       62,
+  CROWN_ROOM:   63,
+  KITCHEN:      64,
+  ARMORY:       65,
+  INN:          66,
+  VILLAGE_HOUSE:67,
+  CATAPULT:     68,
 };
 
 export const SOLID = new Set([
@@ -78,6 +89,16 @@ export const SOLID = new Set([
   TILE_TYPES.NET_STACK,
   TILE_TYPES.CRANE,
   // PIER and DOCK stay walkable
+  // W4 Castle
+  TILE_TYPES.CASTLE_WALL,
+  TILE_TYPES.THRONE,
+  TILE_TYPES.CROWN_ROOM,
+  TILE_TYPES.KITCHEN,
+  TILE_TYPES.ARMORY,
+  TILE_TYPES.INN,
+  TILE_TYPES.VILLAGE_HOUSE,
+  TILE_TYPES.CATAPULT,
+  // CASTLE_FLOOR stays walkable
 ]);
 
 export class Level {

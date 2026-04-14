@@ -32,6 +32,16 @@ export const CUTSCENE_SCRIPTS = {
       { at: 150, ttl: 40, text: 'castle next, loser' },
     ],
   },
+  CASTLE_ESCAPE: {
+    totalTicks: 200,
+    captions: [
+      { at: 0,   ttl: 32, text: 'loaded into catapult' },
+      { at: 35,  ttl: 32, text: 'arc over castle wall' },
+      { at: 72,  ttl: 32, text: 'landed in hay cart' },
+      { at: 110, ttl: 32, text: 'FREEDOM' },
+      { at: 150, ttl: 40, text: 'volcano time folks' },
+    ],
+  },
 };
 
 export function createCutscene(scriptName) {

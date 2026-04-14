@@ -78,6 +78,7 @@ const game = {
   traps: [],
   projectiles: [],
   pickups: [],
+  decoys: [],
   townies: [],
   pickupTimers: { taco: 120, burger: 180, cat: 240 },
   shake: 0,
@@ -118,6 +119,7 @@ function loadWorld(num) {
   game.traps.length = 0;
   game.projectiles.length = 0;
   game.pickups.length = 0;
+  game.decoys.length = 0;
   game.pickupTimers = { taco: 120, burger: 180, cat: 240 };
   game.shake = 0;
   game.planTimer     = def.planTimer;
@@ -217,12 +219,22 @@ const chumpHooks = {
     game.shake = Math.max(game.shake, 18);
   },
   onReachPickup: (c, p) => collectForChump(game, p),
-  onTeleport: (c, fromCol, fromRow, toCol, toRow) => {
+  onTeleport: (c, fromCol, fromRow, toCol, toRow, withClone) => {
     // sparkle burst at origin and destination so the jump reads
     addAttackSpark(game.particles, fromCol, fromRow, game.rng);
     addAttackSpark(game.particles, toCol,   toRow,   game.rng);
     game.shake = Math.max(game.shake, 6);
     say(game.bubbles, c, game.rng.pick(TELEPORT_BUBBLES), 'teleport', 40, 20);
+    if (withClone) {
+      // Clone cheat: leave a fake chump at the old location for 60 ticks
+      game.decoys.push({
+        col: fromCol,
+        row: fromRow,
+        facing: c.facing,
+        animFrame: c.animFrame,
+        lifeTicks: 60,
+      });
+    }
   },
 };
 
@@ -254,12 +266,20 @@ function tryPlaceTrap(col, row) {
   if (col < 0 || row < 0 || col >= game.level.w || row >= game.level.h) return;
   if (!game.level.isWalkable(col, row)) return;
   if (findTrapAt(game.traps, col, row)) return;
+  if (pickupAt(game.pickups, col, row)) return;
   const key = game.selectedTrap;
   const count = game.inventory[key];
   if (!(typeof count === 'number' && count > 0)) return;
   game.inventory[key] = count - 1;
-  game.traps.push(createTrap(key, col, row));
   game.stats.trapsPlaced += 1;
+
+  if (key === TRAP_TYPES.CAT_DECOY) {
+    // Cat Decoy spawns a real cat pickup at the tile. Chump's existing
+    // cat-chase priority does the rest.
+    game.pickups.push(createPickup(PICKUP_TYPES.CAT, col, row));
+  } else {
+    game.traps.push(createTrap(key, col, row));
+  }
 }
 
 function respawnChumpFarFromPlayer() {
@@ -441,6 +461,7 @@ function tick(g) {
     if (input.wasPressed('Digit5')) g.selectedTrap = TRAP_TYPES.CORN_DECOY;
     if (input.wasPressed('Digit6')) g.selectedTrap = TRAP_TYPES.PRETTY_HEN;
     if (input.wasPressed('Digit7')) g.selectedTrap = TRAP_TYPES.BURGER_BAIT;
+    if (input.wasPressed('Digit8')) g.selectedTrap = TRAP_TYPES.CAT_DECOY;
     g.planTimer -= 1;
     if (input.wasPressed('Enter') || g.planTimer <= 0) {
       g.state = 'CHASE';
@@ -455,6 +476,7 @@ function tick(g) {
     if (input.wasPressed('Digit5')) g.selectedTrap = TRAP_TYPES.CORN_DECOY;
     if (input.wasPressed('Digit6')) g.selectedTrap = TRAP_TYPES.PRETTY_HEN;
     if (input.wasPressed('Digit7')) g.selectedTrap = TRAP_TYPES.BURGER_BAIT;
+    if (input.wasPressed('Digit8')) g.selectedTrap = TRAP_TYPES.CAT_DECOY;
 
     g.chaseTimer -= 1;
     g.stats.elapsedTicks += 1;
@@ -479,6 +501,11 @@ function tick(g) {
 
     tickPickups(g);
     tickProjectiles(g);
+    // decoys decay
+    for (let i = g.decoys.length - 1; i >= 0; i--) {
+      g.decoys[i].lifeTicks -= 1;
+      if (g.decoys[i].lifeTicks <= 0) g.decoys.splice(i, 1);
+    }
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
 

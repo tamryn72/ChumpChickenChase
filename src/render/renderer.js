@@ -51,6 +51,16 @@ const TILE_KEY = {
   [T.CARGO]:         'tile_cargo',
   [T.NET_STACK]:     'tile_net_stack',
   [T.CRANE]:         'tile_crane',
+  // W4 Castle
+  [T.CASTLE_WALL]:    'tile_castle_wall',
+  [T.CASTLE_FLOOR]:   'tile_castle_floor',
+  [T.THRONE]:         'tile_throne',
+  [T.CROWN_ROOM]:     'tile_crown_room',
+  [T.KITCHEN]:        'tile_kitchen',
+  [T.ARMORY]:         'tile_armory',
+  [T.INN]:            'tile_inn',
+  [T.VILLAGE_HOUSE]:  'tile_village_house',
+  [T.CATAPULT]:       'tile_catapult',
 };
 
 const PLAYER_KEYS = {
@@ -184,6 +194,27 @@ function drawChump(ctx, c, alpha) {
   cache.draw(ctx, key, x + 4 + sx, y + 4 + sy);
 }
 
+function drawDecoys(ctx, decoys) {
+  for (const d of decoys) {
+    // fade out as the decoy ages
+    const fade = Math.min(1, d.lifeTicks / 20);
+    ctx.globalAlpha = fade * 0.85;
+    const faceName = ['up', 'right', 'down', 'left'][d.facing];
+    const key = `chump_${faceName}_${d.animFrame}`;
+    const x = d.col * TILE;
+    const y = d.row * TILE;
+    // slight lavender tint underneath so you can tell it's a copy
+    ctx.fillStyle = P.lavender;
+    ctx.globalAlpha = fade * 0.25;
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 16, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = fade * 0.85;
+    cache.draw(ctx, key, x + 4, y + 4);
+    ctx.globalAlpha = 1;
+  }
+}
+
 function drawChumpRageBar(ctx, c, alpha) {
   if (c.rage <= 0 && c.finalForm <= 0) return;
   const { x, y } = chumpPixelPos(c, alpha);
@@ -260,6 +291,7 @@ export function render(ctx, game, alpha) {
   }
 
   if (game.projectiles) drawProjectiles(ctx, game.projectiles, alpha);
+  if (game.decoys && game.decoys.length) drawDecoys(ctx, game.decoys);
 
   drawFeathers(ctx, game.particles);
 

@@ -12,10 +12,12 @@ const TRAP_LABEL = {
   [TRAP_TYPES.CORN_DECOY]:  '[5] CORN',
   [TRAP_TYPES.PRETTY_HEN]:  '[6] HEN',
   [TRAP_TYPES.BURGER_BAIT]: '[7] BAIT',
+  [TRAP_TYPES.CAT_DECOY]:   '[8] CAT',
 };
 
 // Canonical display order (matches keybindings)
 const TRAP_DISPLAY_ORDER = [
+  TRAP_TYPES.CAT_DECOY,
   TRAP_TYPES.BURGER_BAIT,
   TRAP_TYPES.PRETTY_HEN,
   TRAP_TYPES.CORN_DECOY,

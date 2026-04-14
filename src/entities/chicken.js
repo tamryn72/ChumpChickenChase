@@ -211,7 +211,10 @@ function maybeTeleport(c, ctx) {
     // don't land on a triggered trap tile / adjacent to player
     if (ctx.player && Math.abs(tc - ctx.player.col) + Math.abs(tr - ctx.player.row) <= 1) continue;
     // teleport!
-    ctx.hooks.onTeleport?.(c, c.col, c.row, tc, tr);
+    const fromCol = c.col;
+    const fromRow = c.row;
+    const withClone = hasCheat(ctx, CHEATS.CLONE);
+    ctx.hooks.onTeleport?.(c, fromCol, fromRow, tc, tr, withClone);
     c.fromCol = tc;
     c.fromRow = tr;
     c.col = tc;

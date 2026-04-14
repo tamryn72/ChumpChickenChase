@@ -402,6 +402,40 @@ export function drawTrapPrettyHenTriggered(ctx)   { drawPrettyHen(ctx); drawTrig
 export function drawTrapBurgerBait(ctx)           { drawBurgerBait(ctx); }
 export function drawTrapBurgerBaitTriggered(ctx)  { drawBurgerBait(ctx); drawTriggered(ctx); }
 
+// Cat Decoy is handled specially in main.js — placing it spawns a real cat
+// pickup at the tile instead of creating a trap. The sprite is only shown
+// in the HUD palette, never actually drawn on the map. We still bake an
+// icon for the palette though.
+function drawCatDecoyIcon(ctx) {
+  // miniature cat figure, basically drawCat() but tinted with a faint
+  // paper label underneath
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(3, 7, 10, 6);
+  ctx.fillRect(4, 4, 6, 4);
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(4, 2, 1, 2);
+  ctx.fillRect(9, 2, 1, 2);
+  ctx.fillStyle = P.green;
+  ctx.fillRect(5, 5, 1, 1);
+  ctx.fillRect(8, 5, 1, 1);
+  ctx.fillStyle = P.pink;
+  ctx.fillRect(6, 6, 1, 1);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(4, 13, 2, 2);
+  ctx.fillRect(11, 13, 2, 2);
+  // paper label under it
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(1, 13, 14, 2);
+  ctx.fillStyle = P.black;
+  ctx.fillRect(3, 13, 1, 1);
+  ctx.fillRect(6, 13, 1, 1);
+  ctx.fillRect(9, 13, 1, 1);
+  ctx.fillRect(12, 13, 1, 1);
+}
+
+export function drawTrapCatDecoy(ctx)          { drawCatDecoyIcon(ctx); }
+export function drawTrapCatDecoyTriggered(ctx) { drawCatDecoyIcon(ctx); drawTriggered(ctx); }
+
 // ---------------------------------------------------------------------------
 // Projectiles — 8x8
 // ---------------------------------------------------------------------------

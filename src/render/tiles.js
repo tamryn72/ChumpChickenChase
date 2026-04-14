@@ -849,3 +849,263 @@ export function drawCrane(ctx) {
   ctx.fillStyle = P.lightGrey;
   ctx.fillRect(27, 16, 3, 3);
 }
+
+// =============================================================================
+// W4 — Castle Town
+// =============================================================================
+
+// Castle wall — grey stone with battlement crenellations on the top
+export function drawCastleWall(ctx) {
+  ctx.fillStyle = '#6e6a5e';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // seams
+  ctx.fillStyle = '#4a4638';
+  ctx.fillRect(0, 8, TILE, 1);
+  ctx.fillRect(0, 16, TILE, 1);
+  ctx.fillRect(0, 24, TILE, 1);
+  ctx.fillRect(8, 0, 1, 8);
+  ctx.fillRect(16, 8, 1, 8);
+  ctx.fillRect(24, 0, 1, 8);
+  ctx.fillRect(4, 17, 1, 7);
+  ctx.fillRect(20, 17, 1, 7);
+  ctx.fillRect(12, 25, 1, 7);
+  // highlights
+  ctx.fillStyle = '#8a8578';
+  ctx.fillRect(2, 2, 4, 2);
+  ctx.fillRect(18, 10, 4, 2);
+  ctx.fillRect(10, 18, 4, 2);
+  ctx.fillRect(22, 26, 4, 2);
+  // moss
+  ctx.fillStyle = P.darkGreen;
+  ctx.globalAlpha = 0.4;
+  ctx.fillRect(6, 28, 3, 2);
+  ctx.fillRect(20, 30, 4, 1);
+  ctx.globalAlpha = 1;
+}
+
+// Castle floor — lighter interior stone
+export function drawCastleFloor(ctx) {
+  ctx.fillStyle = '#8a8578';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // tile seams
+  ctx.fillStyle = '#5f574f';
+  ctx.fillRect(0, 15, TILE, 1);
+  ctx.fillRect(15, 0, 1, TILE);
+  // highlights in each quadrant
+  ctx.fillStyle = '#a39d8d';
+  ctx.fillRect(3, 3, 3, 3);
+  ctx.fillRect(19, 3, 3, 3);
+  ctx.fillRect(3, 19, 3, 3);
+  ctx.fillRect(19, 19, 3, 3);
+}
+
+// Throne — gold and red cushion
+export function drawThrone(ctx) {
+  drawCastleFloor(ctx);
+  // throne back
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(8, 4, 16, 18);
+  ctx.fillStyle = '#c4a530';
+  ctx.fillRect(8, 4, 16, 2);
+  ctx.fillRect(8, 20, 16, 2);
+  ctx.fillRect(8, 4, 2, 18);
+  ctx.fillRect(22, 4, 2, 18);
+  // cushion
+  ctx.fillStyle = P.red;
+  ctx.fillRect(10, 14, 12, 6);
+  // crown-ish top
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(10, 1, 2, 4);
+  ctx.fillRect(14, 1, 2, 4);
+  ctx.fillRect(18, 1, 2, 4);
+  ctx.fillRect(22, 1, 2, 4);
+  ctx.fillStyle = P.red;
+  ctx.fillRect(11, 2, 1, 1);
+  ctx.fillRect(15, 2, 1, 1);
+  ctx.fillRect(19, 2, 1, 1);
+  // legs
+  ctx.fillStyle = '#c4a530';
+  ctx.fillRect(9, 22, 2, 8);
+  ctx.fillRect(21, 22, 2, 8);
+}
+
+// Crown Room — velvet display with a gold crown
+export function drawCrownRoom(ctx) {
+  drawCastleFloor(ctx);
+  // velvet pedestal
+  ctx.fillStyle = P.darkPurple;
+  ctx.fillRect(6, 14, 20, 16);
+  ctx.fillStyle = P.red;
+  ctx.fillRect(6, 14, 20, 2);
+  // display case frame
+  ctx.fillStyle = '#c4a530';
+  ctx.fillRect(8, 6, 16, 10);
+  ctx.fillStyle = P.darkBlue;
+  ctx.fillRect(10, 8, 12, 6);
+  // crown
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(12, 10, 2, 3);
+  ctx.fillRect(15, 10, 2, 3);
+  ctx.fillRect(18, 10, 2, 3);
+  ctx.fillRect(11, 12, 10, 2);
+  ctx.fillStyle = P.red;
+  ctx.fillRect(15, 11, 1, 1);
+  ctx.fillStyle = P.blue;
+  ctx.fillRect(13, 12, 1, 1);
+  ctx.fillRect(19, 12, 1, 1);
+  // base shadow
+  ctx.fillStyle = P.black;
+  ctx.fillRect(6, 30, 20, 1);
+}
+
+// Kitchen — wooden stove + pots
+export function drawKitchen(ctx) {
+  drawCastleFloor(ctx);
+  // stove
+  ctx.fillStyle = '#2a2418';
+  ctx.fillRect(4, 12, 24, 18);
+  ctx.fillStyle = '#4a4028';
+  ctx.fillRect(4, 12, 24, 2);
+  // burner glow
+  ctx.fillStyle = P.red;
+  ctx.fillRect(8, 16, 6, 4);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(9, 17, 4, 2);
+  // pot on burner
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(18, 14, 8, 6);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(17, 13, 10, 1);
+  // steam
+  ctx.fillStyle = P.white;
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(20, 9, 1, 3);
+  ctx.fillRect(22, 7, 1, 4);
+  ctx.globalAlpha = 1;
+  // shelf above
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(4, 5, 24, 2);
+  ctx.fillStyle = P.red;
+  ctx.fillRect(8, 2, 2, 3);
+  ctx.fillRect(14, 2, 2, 3);
+  ctx.fillRect(20, 2, 2, 3);
+}
+
+// Armory — weapon rack
+export function drawArmory(ctx) {
+  drawCastleFloor(ctx);
+  // rack
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(4, 8, 24, 20);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(4, 8, 24, 1);
+  ctx.fillRect(4, 27, 24, 1);
+  // weapons
+  ctx.fillStyle = P.lightGrey;
+  // sword
+  ctx.fillRect(7, 10, 2, 14);
+  ctx.fillRect(6, 10, 4, 2);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(7, 22, 2, 2);
+  // spear
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(14, 9, 1, 16);
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(13, 9, 3, 3);
+  // shield
+  ctx.fillStyle = P.red;
+  ctx.fillRect(19, 12, 8, 10);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(22, 14, 2, 6);
+  ctx.fillRect(20, 16, 6, 2);
+}
+
+// Inn — wooden building with sign
+export function drawInn(ctx) {
+  ctx.fillStyle = '#8b6f47';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // thatched roof
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(0, 0, TILE, 7);
+  ctx.fillStyle = P.brown;
+  for (let x = 0; x < TILE; x += 4) {
+    ctx.fillRect(x, 2, 2, 5);
+  }
+  // sign
+  ctx.fillStyle = P.white;
+  ctx.fillRect(4, 9, 24, 4);
+  ctx.fillStyle = P.red;
+  ctx.fillRect(6, 10, 3, 2);
+  ctx.fillRect(11, 10, 3, 2);
+  ctx.fillRect(16, 10, 3, 2);
+  ctx.fillRect(21, 10, 3, 2);
+  // windows
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(4, 16, 6, 6);
+  ctx.fillRect(22, 16, 6, 6);
+  ctx.fillStyle = P.black;
+  ctx.fillRect(6, 16, 1, 6);
+  ctx.fillRect(24, 16, 1, 6);
+  // door
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(13, 16, 6, 14);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(17, 22, 1, 1);
+}
+
+// Village house — thatched hut
+export function drawVillageHouse(ctx) {
+  ctx.fillStyle = '#6b4000';
+  ctx.fillRect(0, 8, TILE, TILE - 8);
+  // roof
+  ctx.fillStyle = '#c19050';
+  ctx.fillRect(0, 0, TILE, 10);
+  for (let x = 0; x < TILE; x += 3) {
+    ctx.fillStyle = (x / 3) % 2 === 0 ? '#a57840' : '#c19050';
+    ctx.fillRect(x, 2, 2, 8);
+  }
+  // door
+  ctx.fillStyle = P.black;
+  ctx.fillRect(12, 16, 8, 14);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(18, 22, 1, 1);
+  // windows
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(4, 14, 4, 4);
+  ctx.fillRect(24, 14, 4, 4);
+  ctx.fillStyle = P.black;
+  ctx.fillRect(6, 14, 1, 4);
+  ctx.fillRect(26, 14, 1, 4);
+}
+
+// Catapult — wooden frame with arm and counterweight
+export function drawCatapult(ctx) {
+  ctx.fillStyle = P.darkGreen;
+  ctx.fillRect(0, 20, TILE, 12);
+  // base frame
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(4, 18, 24, 12);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(4, 18, 24, 1);
+  ctx.fillRect(4, 29, 24, 1);
+  // arm
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(6, 4, 20, 3);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(6, 4, 20, 1);
+  // bucket / sling with payload
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(22, 2, 6, 4);
+  ctx.fillStyle = P.orange;
+  ctx.fillRect(23, 3, 4, 2);
+  // rope
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(14, 7, 1, 12);
+  // wheels
+  ctx.fillStyle = P.black;
+  ctx.fillRect(6, 27, 5, 5);
+  ctx.fillRect(21, 27, 5, 5);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(8, 29, 1, 1);
+  ctx.fillRect(23, 29, 1, 1);
+}

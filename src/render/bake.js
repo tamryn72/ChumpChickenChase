@@ -46,6 +46,17 @@ export function bakeAll() {
   cache.bake('tile_net_stack',       TILE, TILE, tiles.drawNetStack);
   cache.bake('tile_crane',           TILE, TILE, tiles.drawCrane);
 
+  // W4 Castle
+  cache.bake('tile_castle_wall',   TILE, TILE, tiles.drawCastleWall);
+  cache.bake('tile_castle_floor',  TILE, TILE, tiles.drawCastleFloor);
+  cache.bake('tile_throne',        TILE, TILE, tiles.drawThrone);
+  cache.bake('tile_crown_room',    TILE, TILE, tiles.drawCrownRoom);
+  cache.bake('tile_kitchen',       TILE, TILE, tiles.drawKitchen);
+  cache.bake('tile_armory',        TILE, TILE, tiles.drawArmory);
+  cache.bake('tile_inn',           TILE, TILE, tiles.drawInn);
+  cache.bake('tile_village_house', TILE, TILE, tiles.drawVillageHouse);
+  cache.bake('tile_catapult',      TILE, TILE, tiles.drawCatapult);
+
   // --- player (16x16) ---
   cache.bake('player_up_0',    16, 16, sprites.drawPlayerUp0);
   cache.bake('player_up_1',    16, 16, sprites.drawPlayerUp1);
@@ -81,6 +92,8 @@ export function bakeAll() {
   cache.bake('trap_pretty_hen_triggered',  16, 16, sprites.drawTrapPrettyHenTriggered);
   cache.bake('trap_burger_bait',           16, 16, sprites.drawTrapBurgerBait);
   cache.bake('trap_burger_bait_triggered', 16, 16, sprites.drawTrapBurgerBaitTriggered);
+  cache.bake('trap_cat_decoy',             16, 16, sprites.drawTrapCatDecoy);
+  cache.bake('trap_cat_decoy_triggered',   16, 16, sprites.drawTrapCatDecoyTriggered);
 
   // --- projectiles (8x8) ---
   cache.bake('egg', 8, 8, sprites.drawEgg);

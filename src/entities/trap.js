@@ -16,6 +16,7 @@ export const TRAP_TYPES = {
   CORN_DECOY:   'corn_decoy',
   PRETTY_HEN:   'pretty_hen',
   BURGER_BAIT:  'burger_bait',
+  CAT_DECOY:    'cat_decoy',
 };
 
 // Stun durations in ticks (10Hz logic). 30 ticks ~= 3 real seconds.
