@@ -1,68 +1,79 @@
-# Memory — Locked Decisions & Gotchas
+# Memory — Current Direction
 
-> Things already decided. Don't re-debate without explicit user ask. Update by appending, not rewriting.
+> Working answers to design and tech questions — best current thinking, not commandments. Anything here is open to change; raise it if it becomes friction.
 
-## Architecture (locked)
+## Architecture (current direction)
 
-- **Module system**: native ES modules (`<script type="module">`). NO bundler, NO build step.
-- **Rendering**: single `<canvas>`, 2D context. Logical resolution **640×480** (20×15 tiles × 32px). CSS-scaled to viewport with `image-rendering: pixelated`.
-- **Tick rate**: logic **10Hz fixed**. Render at RAF with position interpolation (alpha = accumulator / TICK_MS).
-- **RNG**: seeded **mulberry32**. All gameplay randomness routes through `src/rng.js`. Sim harness depends on this being clean.
-- **State machine**: top-level states = `BOOT, MENU, PLAN, CHASE, CUTSCENE, VICTORY, GAMEOVER`.
-- **No external assets**: sprites are data arrays + palette, pre-rendered to `OffscreenCanvas` at boot. Keeps the whole game a <1MB single-folder download.
-- **No external deps**: vanilla JS only. Ask before introducing even a small helper lib.
+- **Modules during dev**: native ES modules in `src/` for iteration sanity. How we ship (single HTML file vs served folder vs bundled) is still being discussed — see `PLAN.md` → "Design calls worth talking through."
+- **Rendering**: single `<canvas>`, 2D context. Logical resolution leaning 640×480; exact grid is in play.
+- **Tick rate**: leaning fixed 10Hz logic + RAF render with interpolation. Real-time (no ticks, seconds everywhere) is a viable alternative.
+- **RNG**: seeded `mulberry32`. Useful for reproducing AI bugs and optional daily-seed mode. Fine to drop if it becomes friction.
+- **State machine**: top-level `BOOT, MENU, PLAN, CHASE, CUTSCENE, VICTORY, GAMEOVER`.
+- **Art source**: under discussion — leaning hybrid (emoji + simple procedural tiles). Full-emoji and full-procedural are both on the table. See `PLAN.md` → "Art approach."
+- **External deps**: none currently planned; fine to add if one earns its weight.
+- **External assets**: aiming self-contained so nothing breaks on share. Emoji from the system font counts as "built-in."
 
-## Game rules (canon from README)
+## Game rules (from the README design brief)
 
-- **5 worlds**, 2-phase per level (Plan → Chase)
-- **Catches per world**: W1=2, W2=2, W3=3, W4=3, W5=3
-- Player can place traps in **both** phases (chase supply is limited)
-- **Egg hit** on player → 0.5s freeze + screen shake
-- **Orange goo** is walkable but slows player slightly
-- **Fire spreads** tick-by-tick to adjacent flammable tiles
-- **Rage 0-100**: scales speed, aggression, head scale, hair flop. 100 = temporary FINAL FORM (faster, immune to basic traps, decays back to 0).
-- **Chicken always escapes W1-W4** no matter what. Only the W5 final catch ends the game.
+These are from the README and are our current target. The README is a compass, not a contract — we can adjust any rule if it turns out not to be fun.
 
-## Cheat unlock schedule
+- 5 worlds, 2-phase per level (Plan → Chase)
+- Catches per world: W1=2, W2=2, W3=3, W4=3, W5=3
+- Player can place traps in both phases (chase supply limited)
+- Egg hit on player → short freeze + screen shake
+- Orange goo is walkable but slows player slightly
+- Fire spreads tick-by-tick to adjacent flammable tiles
+- Rage 0-100; 100 triggers temporary FINAL FORM (faster, immune to basic traps)
+- Chicken always escapes W1-W4. Only the W5 final catch ends the game.
 
-| World | Cheats active                          |
-|-------|----------------------------------------|
-| W1    | Dodge                                  |
-| W2    | Dodge + Teleport                       |
-| W3    | Dodge + Teleport + Swim                |
-| W4    | Dodge + Teleport + Clone decoy         |
-| W5    | ALL (Dodge, Teleport, Swim, Clone)     |
+## Cheat unlock (current plan)
 
-## Trap unlock schedule
+| World | Cheats                                   |
+|-------|------------------------------------------|
+| W1    | Dodge                                    |
+| W2    | Dodge + Teleport                         |
+| W3    | Dodge + Teleport + Swim                  |
+| W4    | Dodge + Teleport + Clone                 |
+| W5    | All (Dodge, Teleport, Swim, Clone)       |
 
-| World | New traps unlocked      | Inventory slots |
-|-------|-------------------------|-----------------|
-| W1    | Net, Banana, Cage       | 3               |
-| W2    | + Glue, Corn Decoy      | 5               |
-| W3    | + Pretty Hen, Burger    | 5               |
-| W4    | + Cat Decoy             | 6               |
-| W5    | all                     | 7               |
+## Trap unlock (current plan)
 
-## Gotchas / non-obvious rules
+| World | New traps            | Inventory |
+|-------|----------------------|-----------|
+| W1    | Net, Banana, Cage    | 3         |
+| W2    | + Glue, Corn Decoy   | 5         |
+| W3    | + Pretty Hen, Burger | 5         |
+| W4    | + Cat Decoy          | 6         |
+| W5    | all                  | 7         |
 
-- **Chicken chasing a cat OVERRIDES all other AI.** This is intentional and exploitable by the player. Don't "fix" it.
-- **Burger buff** should make chicken destroy buildings in **one hit** while active. It's a timer pressure mechanic — player must stop him fast or the map crumbles.
-- **Pretty Hen lock duration** is 6+ ticks — minimum 6, scales slightly with low rage (more distracted when calm).
-- **Cat Decoy is mandatory targeting** — chicken MUST chase it regardless of rage/FINAL FORM. Only exception to the priority tree.
-- **Speech bubbles** should feel bratty and frequent, not spammy. Rate-limit per emotion category (taunt, escape, destroy, egg-throw, brag). Cooldown per category, not global.
-- **Final Form** is time-limited (~5s). It's a panic button the chicken gets, not a permanent upgrade.
-- **Goo trail is permanent within a level** — accumulates as a visual and slightly affects player movement. Cleared between levels.
-- **Feathers** are pure cosmetic particles, no gameplay effect.
+## Design intents (things we probably shouldn't lose without thinking)
 
-## Out of scope (don't build)
+These are design calls baked into the feel of the game. Not untouchable, but each exists for a reason.
+
+- **Cat distraction overrides all other AI.** It's the player's primary "exploit" lever — the chicken can't resist chasing a cat, and you can use that against him.
+- **Burger buff is one-hit destroy + speed.** It creates timer pressure — if you don't stop him, the map crumbles fast.
+- **Pretty Hen distraction is a long lock** (~6+ ticks). Strong because her window is the player's best single catch opportunity.
+- **Cat Decoy trap is mandatory override** even in FINAL FORM. The only absolute.
+- **Speech bubbles are frequent, rate-limited per emotion.** Bratty, not spammy. The taunting IS the game's personality.
+- **Final Form is a time-limited panic button** for the chicken, not a permanent upgrade.
+- **Goo trail accumulates within a level** (cosmetic + mild slow), clears between levels.
+- **Feathers are cosmetic.** Pure juice particles.
+
+## Not currently planned (parked, not forbidden)
 
 - Multiplayer / netcode
 - Level editor
-- User accounts / cloud saves
-- Ad integration
-- Analytics beyond anonymous `localStorage` stats
-- Any external API calls
+- Cloud saves / accounts
+- Ads
+- External analytics beyond `localStorage` stats
 
-## Open questions
+## Things actively worth revisiting
 
-See `docs/PLAN.md` → **Discussion** section. Resolve these with user before locking them here.
+All of these have open discussion in `docs/PLAN.md`:
+
+- Art approach (full emoji / procedural pixel art / hybrid)
+- Distribution shape (single HTML / served folder / dev-as-modules-ship-as-single)
+- Logic tick rate (10Hz grid / continuous real-time)
+- Scope tiers (vibe demo / Farm MVP / full 5-world game)
+- Sound scope (from M1 / from M6 / M13 / skip)
+- Cutscene style, catch mechanic, mobile timing, difficulty curve
