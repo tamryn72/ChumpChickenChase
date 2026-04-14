@@ -547,3 +547,305 @@ export function drawClockBase(ctx) {
   ctx.fillStyle = P.yellow;
   ctx.fillRect(18, 26, 1, 1);
 }
+
+// =============================================================================
+// W3 — The Docks
+// =============================================================================
+
+// Water — dark blue with rolling highlights
+export function drawWater(ctx) {
+  ctx.fillStyle = P.darkBlue;
+  ctx.fillRect(0, 0, TILE, TILE);
+  // mid tone
+  ctx.fillStyle = '#2c3f7a';
+  ctx.fillRect(0, 6, TILE, 4);
+  ctx.fillRect(0, 18, TILE, 4);
+  ctx.fillRect(0, 27, TILE, 3);
+  // highlights
+  ctx.fillStyle = P.blue;
+  ctx.fillRect(4, 7, 5, 1);
+  ctx.fillRect(14, 8, 6, 1);
+  ctx.fillRect(22, 7, 4, 1);
+  ctx.fillRect(2, 19, 7, 1);
+  ctx.fillRect(15, 20, 6, 1);
+  ctx.fillRect(24, 19, 4, 1);
+  // sparkles
+  ctx.fillStyle = P.white;
+  ctx.globalAlpha = 0.6;
+  ctx.fillRect(6, 3, 1, 1);
+  ctx.fillRect(18, 12, 1, 1);
+  ctx.fillRect(26, 15, 1, 1);
+  ctx.fillRect(10, 24, 1, 1);
+  ctx.globalAlpha = 1;
+}
+
+// Pier — wood planks walkable
+export function drawPier(ctx) {
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(0, 0, TILE, TILE);
+  // plank lines
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(0, 7, TILE, 1);
+  ctx.fillRect(0, 15, TILE, 1);
+  ctx.fillRect(0, 23, TILE, 1);
+  ctx.fillRect(0, 31, TILE, 1);
+  // grain knots
+  ctx.fillStyle = P.black;
+  ctx.globalAlpha = 0.4;
+  ctx.fillRect(5, 3, 2, 1);
+  ctx.fillRect(20, 11, 2, 1);
+  ctx.fillRect(12, 19, 2, 1);
+  ctx.fillRect(26, 27, 2, 1);
+  ctx.globalAlpha = 1;
+  // highlight stripes
+  ctx.fillStyle = '#c37040';
+  ctx.fillRect(0, 2, TILE, 1);
+  ctx.fillRect(0, 10, TILE, 1);
+  ctx.fillRect(0, 18, TILE, 1);
+  ctx.fillRect(0, 26, TILE, 1);
+}
+
+// Dock — stone harbor floor
+export function drawDock(ctx) {
+  ctx.fillStyle = '#5a6671';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // stone block seams
+  ctx.fillStyle = '#3d4a55';
+  ctx.fillRect(0, 7, TILE, 1);
+  ctx.fillRect(0, 16, TILE, 1);
+  ctx.fillRect(0, 24, TILE, 1);
+  ctx.fillRect(7, 0, 1, 8);
+  ctx.fillRect(16, 8, 1, 9);
+  ctx.fillRect(5, 17, 1, 8);
+  ctx.fillRect(22, 17, 1, 8);
+  ctx.fillRect(12, 25, 1, 7);
+  // lighter highlights
+  ctx.fillStyle = '#707c87';
+  ctx.fillRect(2, 2, 3, 2);
+  ctx.fillRect(18, 3, 4, 2);
+  ctx.fillRect(8, 10, 4, 2);
+  ctx.fillRect(24, 18, 3, 2);
+  ctx.fillRect(14, 27, 4, 2);
+}
+
+// Boat — brown hull with a small cabin and mast
+export function drawBoat(ctx) {
+  drawWater(ctx);
+  // hull
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(2, 18, 28, 10);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(2, 18, 28, 1);
+  ctx.fillRect(2, 27, 28, 1);
+  // hull curve
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(4, 28, 24, 1);
+  ctx.fillRect(6, 29, 20, 1);
+  // cabin
+  ctx.fillStyle = P.red;
+  ctx.fillRect(10, 10, 12, 8);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(12, 12, 3, 3);
+  ctx.fillRect(17, 12, 3, 3);
+  // mast
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(15, 2, 2, 8);
+  // sail
+  ctx.fillStyle = P.white;
+  ctx.fillRect(17, 3, 8, 6);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(17, 3, 1, 6);
+}
+
+// Warehouse — big grey metal building with door and window
+export function drawWarehouse(ctx) {
+  ctx.fillStyle = '#5c5450';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // roof
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(0, 0, TILE, 6);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(0, 4, TILE, 1);
+  // side panels
+  ctx.fillStyle = '#464039';
+  for (let x = 3; x < TILE; x += 6) {
+    ctx.fillRect(x, 6, 1, TILE - 6);
+  }
+  // window
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(4, 10, 10, 6);
+  ctx.fillStyle = P.black;
+  ctx.fillRect(8, 10, 1, 6);
+  ctx.fillRect(4, 12, 10, 1);
+  // door
+  ctx.fillStyle = P.black;
+  ctx.fillRect(18, 14, 10, 16);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(26, 22, 1, 1);
+}
+
+// Fish Market — stall with striped awning and fish in it
+export function drawFishMarket(ctx) {
+  ctx.fillStyle = '#8b6f47';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // awning
+  ctx.fillStyle = P.blue;
+  ctx.fillRect(0, 0, TILE, 6);
+  ctx.fillStyle = P.white;
+  for (let x = 0; x < TILE; x += 6) {
+    ctx.fillRect(x, 0, 3, 6);
+  }
+  // sign
+  ctx.fillStyle = P.white;
+  ctx.fillRect(4, 8, 24, 3);
+  ctx.fillStyle = P.blue;
+  ctx.fillRect(6, 9, 2, 1);
+  ctx.fillRect(10, 9, 2, 1);
+  ctx.fillRect(14, 9, 2, 1);
+  ctx.fillRect(18, 9, 2, 1);
+  ctx.fillRect(22, 9, 2, 1);
+  // display
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(3, 14, 26, 14);
+  // fish on ice
+  ctx.fillStyle = P.blue;
+  ctx.fillRect(5, 17, 7, 3);
+  ctx.fillRect(14, 17, 7, 3);
+  ctx.fillRect(22, 17, 5, 3);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(5, 17, 1, 1);
+  ctx.fillRect(14, 17, 1, 1);
+  ctx.fillRect(22, 17, 1, 1);
+  // more fish
+  ctx.fillStyle = '#3a4a7e';
+  ctx.fillRect(5, 22, 6, 3);
+  ctx.fillRect(13, 22, 7, 3);
+  ctx.fillRect(22, 22, 5, 3);
+}
+
+// Lighthouse TOP — red and white with the light room
+export function drawLighthouseTop(ctx) {
+  // sky behind
+  ctx.fillStyle = P.darkBlue;
+  ctx.fillRect(0, 0, TILE, 4);
+  // cap
+  ctx.fillStyle = P.red;
+  ctx.fillRect(8, 2, 16, 4);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(10, 0, 12, 3);
+  // light room
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(10, 6, 12, 8);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(12, 8, 8, 4);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(10, 14, 12, 2);
+  // stone body start
+  ctx.fillStyle = P.white;
+  ctx.fillRect(6, 16, 20, 8);
+  ctx.fillStyle = P.red;
+  ctx.fillRect(6, 20, 20, 4);
+  // railing
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(6, 15, 20, 1);
+  ctx.fillRect(8, 28, 16, 4);
+}
+
+// Lighthouse BASE — stone body
+export function drawLighthouseBase(ctx) {
+  ctx.fillStyle = P.white;
+  ctx.fillRect(6, 0, 20, TILE);
+  ctx.fillStyle = P.red;
+  ctx.fillRect(6, 8, 20, 4);
+  ctx.fillRect(6, 20, 20, 4);
+  // stone seams
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(6, 0, 20, 1);
+  ctx.fillRect(6, 16, 20, 1);
+  ctx.fillRect(6, 28, 20, 1);
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(6, 0, 1, TILE);
+  ctx.fillRect(25, 0, 1, TILE);
+  // door
+  ctx.fillStyle = P.black;
+  ctx.fillRect(13, 24, 6, 8);
+  // background water
+  ctx.fillStyle = P.darkBlue;
+  ctx.fillRect(0, 0, 6, TILE);
+  ctx.fillRect(26, 0, 6, TILE);
+}
+
+// Cargo — wooden crate with stamps
+export function drawCargo(ctx) {
+  drawDock(ctx);
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(2, 2, 28, 28);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(2, 2, 28, 1);
+  ctx.fillRect(2, 29, 28, 1);
+  ctx.fillRect(2, 2, 1, 28);
+  ctx.fillRect(29, 2, 1, 28);
+  // planks
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(2, 10, 28, 1);
+  ctx.fillRect(2, 18, 28, 1);
+  // stamps
+  ctx.fillStyle = P.red;
+  ctx.fillRect(6, 5, 4, 4);
+  ctx.fillRect(20, 22, 4, 4);
+  // rope handle
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(12, 14, 8, 1);
+}
+
+// Net Stack — pile of fishing nets
+export function drawNetStack(ctx) {
+  drawDock(ctx);
+  // rope pile
+  ctx.fillStyle = '#9c7a3a';
+  ctx.fillRect(3, 14, 26, 14);
+  ctx.fillRect(5, 10, 22, 14);
+  ctx.fillRect(8, 6, 16, 12);
+  // net mesh pattern
+  ctx.fillStyle = P.chumpDeep;
+  for (let y = 8; y < 28; y += 4) {
+    ctx.fillRect(5, y, 22, 1);
+  }
+  for (let x = 6; x < 28; x += 4) {
+    ctx.fillRect(x, 8, 1, 20);
+  }
+  // floats
+  ctx.fillStyle = P.red;
+  ctx.fillRect(8, 9, 3, 3);
+  ctx.fillRect(18, 7, 3, 3);
+  ctx.fillRect(23, 12, 3, 3);
+}
+
+// Crane — metal tower with arm and hook
+export function drawCrane(ctx) {
+  drawDock(ctx);
+  // base
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(10, 20, 12, 12);
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(10, 20, 12, 2);
+  ctx.fillRect(10, 30, 12, 2);
+  // tower
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(12, 4, 8, 16);
+  // cross bracing
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(12, 8, 8, 1);
+  ctx.fillRect(12, 12, 8, 1);
+  ctx.fillRect(12, 16, 8, 1);
+  // arm
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(18, 4, 14, 3);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(18, 4, 14, 1);
+  // hook line
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(28, 7, 1, 10);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(27, 16, 3, 3);
+}

@@ -326,6 +326,82 @@ export function drawTrapGlueTriggered(ctx)        { drawGlue(ctx); drawTriggered
 export function drawTrapCornDecoy(ctx)            { drawCornDecoy(ctx); }
 export function drawTrapCornDecoyTriggered(ctx)   { drawCornDecoy(ctx); drawTriggered(ctx); }
 
+function drawPrettyHen(ctx) {
+  // ground shadow
+  ctx.fillStyle = P.black;
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(3, 13, 10, 1);
+  ctx.globalAlpha = 1;
+  // body — pink/white
+  ctx.fillStyle = P.pink;
+  ctx.fillRect(4, 6, 8, 7);
+  ctx.fillRect(5, 5, 6, 1);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(5, 8, 6, 3);
+  // head
+  ctx.fillStyle = P.pink;
+  ctx.fillRect(10, 3, 4, 4);
+  // comb
+  ctx.fillStyle = P.red;
+  ctx.fillRect(11, 1, 1, 2);
+  ctx.fillRect(12, 2, 1, 1);
+  ctx.fillRect(13, 1, 1, 2);
+  // beak
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(14, 4, 2, 2);
+  // eye
+  ctx.fillStyle = P.black;
+  ctx.fillRect(12, 4, 1, 1);
+  // wing
+  ctx.fillStyle = '#d85090';
+  ctx.fillRect(6, 8, 4, 3);
+  // legs
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(6, 13, 1, 2);
+  ctx.fillRect(9, 13, 1, 2);
+  // eyelash hearts above
+  ctx.fillStyle = P.red;
+  ctx.fillRect(2, 2, 1, 1);
+  ctx.fillRect(3, 3, 1, 1);
+}
+
+function drawBurgerBait(ctx) {
+  // looks like a burger but with a subtle danger hint
+  // top bun
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(3, 4, 10, 3);
+  ctx.fillRect(4, 3, 8, 1);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(5, 4, 1, 1);
+  ctx.fillRect(8, 5, 1, 1);
+  ctx.fillRect(10, 4, 1, 1);
+  // lettuce
+  ctx.fillStyle = P.green;
+  ctx.fillRect(2, 7, 12, 1);
+  // patty
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(2, 8, 12, 2);
+  // cheese
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(2, 10, 12, 1);
+  // bottom bun
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(3, 11, 10, 3);
+  // subtle trap hint — faint wire or stake poking out
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(1, 14, 14, 1);
+  ctx.fillRect(2, 15, 2, 1);
+  ctx.fillRect(12, 15, 2, 1);
+  // tiny "BAIT" hint dot
+  ctx.fillStyle = P.red;
+  ctx.fillRect(14, 3, 1, 1);
+}
+
+export function drawTrapPrettyHen(ctx)            { drawPrettyHen(ctx); }
+export function drawTrapPrettyHenTriggered(ctx)   { drawPrettyHen(ctx); drawTriggered(ctx); }
+export function drawTrapBurgerBait(ctx)           { drawBurgerBait(ctx); }
+export function drawTrapBurgerBaitTriggered(ctx)  { drawBurgerBait(ctx); drawTriggered(ctx); }
+
 // ---------------------------------------------------------------------------
 // Projectiles — 8x8
 // ---------------------------------------------------------------------------

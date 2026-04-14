@@ -9,25 +9,33 @@
 //                 ("eating") that frees up a catch window.
 
 export const TRAP_TYPES = {
-  NET:        'net',
-  BANANA:     'banana',
-  CAGE:       'cage',
-  GLUE:       'glue',
-  CORN_DECOY: 'corn_decoy',
+  NET:          'net',
+  BANANA:       'banana',
+  CAGE:         'cage',
+  GLUE:         'glue',
+  CORN_DECOY:   'corn_decoy',
+  PRETTY_HEN:   'pretty_hen',
+  BURGER_BAIT:  'burger_bait',
 };
 
 // Stun durations in ticks (10Hz logic). 30 ticks ~= 3 real seconds.
 export const TRAP_STUN = {
-  [TRAP_TYPES.NET]:        30,
-  [TRAP_TYPES.BANANA]:     20,
-  [TRAP_TYPES.CAGE]:       40,
-  [TRAP_TYPES.GLUE]:       50,
-  [TRAP_TYPES.CORN_DECOY]: 50,  // "eating" lock — still a catch window
+  [TRAP_TYPES.NET]:         30,
+  [TRAP_TYPES.BANANA]:      20,
+  [TRAP_TYPES.CAGE]:        40,
+  [TRAP_TYPES.GLUE]:        50,
+  [TRAP_TYPES.CORN_DECOY]:  50,  // "eating" lock
+  [TRAP_TYPES.PRETTY_HEN]:  60,  // flirt lock — longest
+  [TRAP_TYPES.BURGER_BAIT]: 40,  // bait reveal stun
 };
 
-// Traps that lure the chicken toward them (pull priority) instead of
+// Traps that actively lure the chicken (pull priority) instead of
 // waiting for him to bumble in.
-export const LURE_TRAPS = new Set([TRAP_TYPES.CORN_DECOY]);
+export const LURE_TRAPS = new Set([
+  TRAP_TYPES.CORN_DECOY,
+  TRAP_TYPES.PRETTY_HEN,
+  TRAP_TYPES.BURGER_BAIT,
+]);
 
 export function createTrap(type, col, row) {
   return {

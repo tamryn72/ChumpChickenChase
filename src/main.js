@@ -439,6 +439,8 @@ function tick(g) {
     if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
     if (input.wasPressed('Digit4')) g.selectedTrap = TRAP_TYPES.GLUE;
     if (input.wasPressed('Digit5')) g.selectedTrap = TRAP_TYPES.CORN_DECOY;
+    if (input.wasPressed('Digit6')) g.selectedTrap = TRAP_TYPES.PRETTY_HEN;
+    if (input.wasPressed('Digit7')) g.selectedTrap = TRAP_TYPES.BURGER_BAIT;
     g.planTimer -= 1;
     if (input.wasPressed('Enter') || g.planTimer <= 0) {
       g.state = 'CHASE';
@@ -451,6 +453,8 @@ function tick(g) {
     if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
     if (input.wasPressed('Digit4')) g.selectedTrap = TRAP_TYPES.GLUE;
     if (input.wasPressed('Digit5')) g.selectedTrap = TRAP_TYPES.CORN_DECOY;
+    if (input.wasPressed('Digit6')) g.selectedTrap = TRAP_TYPES.PRETTY_HEN;
+    if (input.wasPressed('Digit7')) g.selectedTrap = TRAP_TYPES.BURGER_BAIT;
 
     g.chaseTimer -= 1;
     g.stats.elapsedTicks += 1;

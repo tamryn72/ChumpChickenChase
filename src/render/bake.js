@@ -33,6 +33,19 @@ export function bakeAll() {
   cache.bake('tile_clock_top',   TILE, TILE, tiles.drawClockTop);
   cache.bake('tile_clock_base',  TILE, TILE, tiles.drawClockBase);
 
+  // W3 Docks
+  cache.bake('tile_water',           TILE, TILE, tiles.drawWater);
+  cache.bake('tile_pier',            TILE, TILE, tiles.drawPier);
+  cache.bake('tile_dock',            TILE, TILE, tiles.drawDock);
+  cache.bake('tile_boat',            TILE, TILE, tiles.drawBoat);
+  cache.bake('tile_warehouse',       TILE, TILE, tiles.drawWarehouse);
+  cache.bake('tile_fish_market',     TILE, TILE, tiles.drawFishMarket);
+  cache.bake('tile_lighthouse_t',    TILE, TILE, tiles.drawLighthouseTop);
+  cache.bake('tile_lighthouse_b',    TILE, TILE, tiles.drawLighthouseBase);
+  cache.bake('tile_cargo',           TILE, TILE, tiles.drawCargo);
+  cache.bake('tile_net_stack',       TILE, TILE, tiles.drawNetStack);
+  cache.bake('tile_crane',           TILE, TILE, tiles.drawCrane);
+
   // --- player (16x16) ---
   cache.bake('player_up_0',    16, 16, sprites.drawPlayerUp0);
   cache.bake('player_up_1',    16, 16, sprites.drawPlayerUp1);
@@ -64,6 +77,10 @@ export function bakeAll() {
   cache.bake('trap_glue_triggered',        16, 16, sprites.drawTrapGlueTriggered);
   cache.bake('trap_corn_decoy',            16, 16, sprites.drawTrapCornDecoy);
   cache.bake('trap_corn_decoy_triggered',  16, 16, sprites.drawTrapCornDecoyTriggered);
+  cache.bake('trap_pretty_hen',            16, 16, sprites.drawTrapPrettyHen);
+  cache.bake('trap_pretty_hen_triggered',  16, 16, sprites.drawTrapPrettyHenTriggered);
+  cache.bake('trap_burger_bait',           16, 16, sprites.drawTrapBurgerBait);
+  cache.bake('trap_burger_bait_triggered', 16, 16, sprites.drawTrapBurgerBaitTriggered);
 
   // --- projectiles (8x8) ---
   cache.bake('egg', 8, 8, sprites.drawEgg);

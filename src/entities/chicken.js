@@ -11,6 +11,7 @@
 import { TILE } from '../config.js';
 import { FACE } from './player.js';
 import { TRAP_STUN, TRAP_TYPES, LURE_TRAPS, findNearestLure } from './trap.js';
+import { TILE_TYPES } from '../world/level.js';
 
 export const CHEATS = {
   DODGE:    'dodge',
@@ -145,17 +146,31 @@ function hasCheat(ctx, name) {
 }
 
 // Returns true if stepping to (tc, tr) is "safe enough" for chump.
-// Dodge cheat: chump avoids stepping directly into passive traps with
-// 70% probability. Lures are exempt (he wants those).
+// Handles:
+//   - Water is a special case. Blocked normally, but chump with SWIM
+//     treats it as passable.
+//   - DODGE cheat: chump avoids stepping into passive traps 70% of the time.
+//     Lures (Corn Decoy, Pretty Hen, Burger Bait) are exempt.
 function isStepAcceptable(c, tc, tr, ctx) {
-  if (!ctx.level.isWalkable(tc, tr)) return false;
+  if (tc < 0 || tc >= ctx.level.w || tr < 0 || tr >= ctx.level.h) return false;
+  const tile = ctx.level.at(tc, tr);
+  const isWater = tile === TILE_TYPES.WATER;
+
+  if (isWater) {
+    if (!hasCheat(ctx, CHEATS.SWIM)) return false;
+    // swim makes water passable — skip the isWalkable check which would
+    // reject water because it's in SOLID.
+  } else if (!ctx.level.isWalkable(tc, tr)) {
+    return false;
+  }
+
   if (!hasCheat(ctx, CHEATS.DODGE)) return true;
   if (!ctx.traps) return true;
   for (const t of ctx.traps) {
     if (t.triggered) continue;
     if (t.col !== tc || t.row !== tr) continue;
-    if (LURE_TRAPS.has(t.type)) return true; // never dodge lures
-    if (ctx.rng.chance(0.7)) return false;   // 70% dodge success
+    if (LURE_TRAPS.has(t.type)) return true;
+    if (ctx.rng.chance(0.7)) return false;
     return true;
   }
   return true;

@@ -5,15 +5,19 @@ import { P } from './palette.js';
 import { TRAP_TYPES } from '../entities/trap.js';
 
 const TRAP_LABEL = {
-  [TRAP_TYPES.NET]:        '[1] NET',
-  [TRAP_TYPES.BANANA]:     '[2] BAN',
-  [TRAP_TYPES.CAGE]:       '[3] CAGE',
-  [TRAP_TYPES.GLUE]:       '[4] GLUE',
-  [TRAP_TYPES.CORN_DECOY]: '[5] CORN',
+  [TRAP_TYPES.NET]:         '[1] NET',
+  [TRAP_TYPES.BANANA]:      '[2] BAN',
+  [TRAP_TYPES.CAGE]:        '[3] CAGE',
+  [TRAP_TYPES.GLUE]:        '[4] GLUE',
+  [TRAP_TYPES.CORN_DECOY]:  '[5] CORN',
+  [TRAP_TYPES.PRETTY_HEN]:  '[6] HEN',
+  [TRAP_TYPES.BURGER_BAIT]: '[7] BAIT',
 };
 
 // Canonical display order (matches keybindings)
 const TRAP_DISPLAY_ORDER = [
+  TRAP_TYPES.BURGER_BAIT,
+  TRAP_TYPES.PRETTY_HEN,
   TRAP_TYPES.CORN_DECOY,
   TRAP_TYPES.GLUE,
   TRAP_TYPES.CAGE,

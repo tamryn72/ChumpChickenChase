@@ -22,6 +22,16 @@ export const CUTSCENE_SCRIPTS = {
       { at: 150, ttl: 40, text: 'see you at the docks' },
     ],
   },
+  DOCKS_ESCAPE: {
+    totalTicks: 200,
+    captions: [
+      { at: 0,   ttl: 32, text: 'hijacked that speedboat' },
+      { at: 35,  ttl: 32, text: 'tiny sunglasses deployed' },
+      { at: 72,  ttl: 32, text: 'doing donuts in the harbor' },
+      { at: 110, ttl: 32, text: 'single wing wave goodbye' },
+      { at: 150, ttl: 40, text: 'castle next, loser' },
+    ],
+  },
 };
 
 export function createCutscene(scriptName) {

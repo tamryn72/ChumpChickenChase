@@ -39,6 +39,18 @@ const TILE_KEY = {
   [T.APPLE_CART]:   'tile_apple_cart',
   [T.FISH_CART]:    'tile_fish_cart',
   [T.FLOWER_SHOP]:  'tile_flower_shop',
+  // W3 Docks
+  [T.WATER]:         'tile_water',
+  [T.PIER]:          'tile_pier',
+  [T.DOCK]:          'tile_dock',
+  [T.BOAT]:          'tile_boat',
+  [T.WAREHOUSE]:     'tile_warehouse',
+  [T.FISH_MARKET]:   'tile_fish_market',
+  [T.LIGHTHOUSE_T]:  'tile_lighthouse_t',
+  [T.LIGHTHOUSE_B]:  'tile_lighthouse_b',
+  [T.CARGO]:         'tile_cargo',
+  [T.NET_STACK]:     'tile_net_stack',
+  [T.CRANE]:         'tile_crane',
 };
 
 const PLAYER_KEYS = {
