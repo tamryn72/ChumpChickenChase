@@ -1,7 +1,9 @@
-// Level / tilemap data structure.
+// Level / tilemap data structure. TILE_TYPES is a shared enum across all worlds.
 
 export const TILE_TYPES = {
   EMPTY:        0,
+
+  // --- W1 Farm ---
   GRASS:        1,
   DIRT:         2,
   FENCE_H:      3,
@@ -15,9 +17,22 @@ export const TILE_TYPES = {
   RUBBLE:      11,
   TACO_TRUCK_L: 12,
   TACO_TRUCK_R: 13,
+
+  // --- W2 Market ---
+  COBBLE:      20,
+  BAKERY:      21,
+  RESTAURANT:  22,
+  CLOCK_TOP:   23,   // cosmetic upper half of tower
+  CLOCK_BASE:  24,   // load-bearing lower half
+  FOUNTAIN:    25,
+  FRUIT_STAND: 26,
+  APPLE_CART:  27,
+  FISH_CART:   28,
+  FLOWER_SHOP: 29,
 };
 
 export const SOLID = new Set([
+  // W1
   TILE_TYPES.POND,
   TILE_TYPES.HAY,
   TILE_TYPES.BARN_W,
@@ -28,6 +43,16 @@ export const SOLID = new Set([
   TILE_TYPES.TRACTOR,
   TILE_TYPES.TACO_TRUCK_L,
   TILE_TYPES.TACO_TRUCK_R,
+  // W2
+  TILE_TYPES.BAKERY,
+  TILE_TYPES.RESTAURANT,
+  TILE_TYPES.CLOCK_TOP,
+  TILE_TYPES.CLOCK_BASE,
+  TILE_TYPES.FOUNTAIN,
+  TILE_TYPES.FRUIT_STAND,
+  TILE_TYPES.APPLE_CART,
+  TILE_TYPES.FISH_CART,
+  TILE_TYPES.FLOWER_SHOP,
 ]);
 
 export class Level {

@@ -1,13 +1,21 @@
-// Menu (title screen) + score screen rendering.
+// Menu (title screen) + world select + score screen rendering.
 
 import { CANVAS_W, CANVAS_H, TITLE } from '../config.js';
 import * as cache from './sprite-cache.js';
 import { P } from './palette.js';
+import { WORLD_ORDER } from '../world/index.js';
 
-// --- Title screen ---
+// --- Title + world-select screen ---
+// Menu layout:
+//   big chump sprite, title, subtitle
+//   world list (arrow keys to navigate, ENTER to launch)
+//   instructions + credits
+//
+// game.menuIndex is the currently highlighted world row (zero-based in
+// WORLD_ORDER).
 
 export function drawMenu(ctx, game, save) {
-  // starfield background
+  // background
   ctx.fillStyle = '#1a1208';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
@@ -26,57 +34,89 @@ export function drawMenu(ctx, game, save) {
   ctx.fillStyle = '#2a1a0a';
   ctx.fillRect(0, CANVAS_H - 60, CANVAS_W, 60);
 
-  // giant chicken (4x scale) bouncing
-  const bounceY = Math.sin(game.tick * 0.12) * 5;
+  // chump sprite (smaller now, on the left; world list takes the right)
+  const bounceY = Math.sin(game.tick * 0.12) * 4;
   const frame = Math.floor(game.tick / 6) % 2;
   ctx.save();
-  ctx.translate(CANVAS_W / 2, CANVAS_H / 2 + 20 + bounceY);
-  ctx.scale(4, 4);
+  ctx.translate(140, CANVAS_H / 2 + 30 + bounceY);
+  ctx.scale(3.5, 3.5);
   cache.draw(ctx, `chump_down_${frame}`, -12, -12);
   ctx.restore();
 
   // title
   ctx.textAlign = 'center';
-  ctx.font = 'bold 36px ui-monospace, monospace';
-  // shadow
+  ctx.font = 'bold 30px ui-monospace, monospace';
   ctx.fillStyle = P.black;
-  ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2 + 3, 56 + 3);
-  // orange fill
+  ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2 + 3, 50 + 3);
   ctx.fillStyle = P.chumpOrange;
-  ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2, 56);
+  ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2, 50);
 
   // subtitle
   ctx.fillStyle = P.yellow;
-  ctx.font = 'bold 12px ui-monospace, monospace';
-  ctx.fillText('ORANGE CHICKEN CHAOS', CANVAS_W / 2, 78);
+  ctx.font = 'bold 11px ui-monospace, monospace';
+  ctx.fillText('ORANGE CHICKEN CHAOS', CANVAS_W / 2, 70);
 
-  // prompt (blinks)
-  if (Math.floor(game.tick / 12) % 2 === 0) {
-    ctx.fillStyle = P.white;
-    ctx.font = 'bold 14px ui-monospace, monospace';
-    ctx.fillText('PRESS ENTER TO START', CANVAS_W / 2, CANVAS_H - 70);
+  // --- world list (right side) ---
+  const listX = 340;
+  const listY = 110;
+  const rowH = 24;
+
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 10px ui-monospace, monospace';
+  ctx.fillStyle = P.white;
+  ctx.fillText('SELECT WORLD', listX, listY - 14);
+
+  for (let i = 0; i < WORLD_ORDER.length; i++) {
+    const w = WORLD_ORDER[i];
+    const y = listY + i * rowH;
+    const unlocked = w.num <= save.worldsUnlocked && w.exists;
+    const highlighted = i === game.menuIndex;
+
+    // selection bar
+    if (highlighted) {
+      ctx.fillStyle = unlocked ? 'rgba(255,102,0,0.28)' : 'rgba(255,0,77,0.18)';
+      ctx.fillRect(listX - 6, y - 12, 250, rowH - 4);
+      ctx.fillStyle = unlocked ? P.chumpOrange : P.darkGrey;
+      ctx.fillRect(listX - 6, y - 12, 2, rowH - 4);
+    }
+
+    // num + name
+    let label = `${w.num}. ${w.name}`;
+    if (!w.exists)      label += '  [SOON]';
+    else if (!unlocked) label += '  [LOCKED]';
+    else if (save.bestStats[w.num]) label += '  [x]';
+
+    ctx.fillStyle = unlocked ? (highlighted ? P.white : P.lightGrey) : P.darkGrey;
+    ctx.font = 'bold 12px ui-monospace, monospace';
+    ctx.fillText(label, listX, y);
+
+    // best score hint for beaten worlds
+    const best = save.bestStats[w.num];
+    if (best) {
+      ctx.font = '8px ui-monospace, monospace';
+      ctx.fillStyle = P.darkGrey;
+      ctx.fillText(
+        `best: ${best.buildingsSaved}/${best.buildingsTotal} saved, ` +
+        `${(best.elapsedTicks / 10).toFixed(0)}s`,
+        listX + 8, y + 9,
+      );
+    }
   }
 
-  // worlds unlocked
+  // --- controls hint ---
   ctx.fillStyle = P.lightGrey;
   ctx.font = '10px ui-monospace, monospace';
-  let worldDots = '';
-  for (let w = 1; w <= 5; w++) {
-    worldDots += (w <= save.worldsUnlocked) ? '1 ' : '? ';
+  ctx.textAlign = 'center';
+  if (Math.floor(game.tick / 14) % 2 === 0) {
+    ctx.fillText('ARROWS to pick  ENTER to play', CANVAS_W / 2, CANVAS_H - 34);
   }
-  ctx.fillText('WORLDS  ' + worldDots.trim(), CANVAS_W / 2, CANVAS_H - 44);
-
-  const plays = save.totalPlays || 0;
-  if (plays > 0) {
-    ctx.fillStyle = P.darkGrey;
-    ctx.font = '9px ui-monospace, monospace';
-    ctx.fillText(`runs: ${plays}`, CANVAS_W / 2, CANVAS_H - 28);
-  }
-
-  // credit
   ctx.fillStyle = P.darkGrey;
   ctx.font = '9px ui-monospace, monospace';
+  ctx.fillText(`worlds unlocked: ${save.worldsUnlocked} / 5`, CANVAS_W / 2, CANVAS_H - 18);
+
+  // credit
   ctx.textAlign = 'left';
+  ctx.fillStyle = P.darkGrey;
   ctx.fillText('chump chicken chase', 6, CANVAS_H - 6);
   ctx.textAlign = 'right';
   ctx.fillText('v0.1 dev', CANVAS_W - 6, CANVAS_H - 6);
@@ -85,7 +125,6 @@ export function drawMenu(ctx, game, save) {
 // --- Score screen ---
 
 export function drawScore(ctx, game) {
-  // dim the game scene behind it
   ctx.fillStyle = 'rgba(0,0,0,0.82)';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
@@ -94,23 +133,20 @@ export function drawScore(ctx, game) {
 
   const won = game.result === 'won';
 
-  // banner
-  ctx.font = 'bold 30px ui-monospace, monospace';
+  ctx.font = 'bold 28px ui-monospace, monospace';
   ctx.fillStyle = P.black;
-  const title = won ? 'FARM SAVED' : 'FARM LOST';
-  ctx.fillText(title, CANVAS_W / 2 + 2, 52 + 2);
+  const title = won ? `${game.worldName || 'WORLD'} SAVED` : `${game.worldName || 'WORLD'} LOST`;
+  ctx.fillText(title.toUpperCase(), CANVAS_W / 2 + 2, 48 + 2);
   ctx.fillStyle = won ? P.green : P.red;
-  ctx.fillText(title, CANVAS_W / 2, 52);
+  ctx.fillText(title.toUpperCase(), CANVAS_W / 2, 48);
 
-  // subtitle quip
   ctx.font = '10px ui-monospace, monospace';
   ctx.fillStyle = P.lightGrey;
   const sub = won
     ? 'chump escaped — for now'
     : 'chump has declared victory';
-  ctx.fillText(sub, CANVAS_W / 2, 74);
+  ctx.fillText(sub, CANVAS_W / 2, 70);
 
-  // stats table
   const s = game.resultStats || {};
   const rows = [
     ['CATCHES',         `${s.catches ?? 0} / ${s.catchesNeeded ?? 2}`],
@@ -126,7 +162,7 @@ export function drawScore(ctx, game) {
   ];
 
   ctx.font = '11px ui-monospace, monospace';
-  const startY = 108;
+  const startY = 104;
   const rowH = 17;
   const labelX = CANVAS_W / 2 - 110;
   const valueX = CANVAS_W / 2 + 110;
@@ -142,7 +178,6 @@ export function drawScore(ctx, game) {
     ctx.fillText(value, valueX, y);
   }
 
-  // prompt
   ctx.textAlign = 'center';
   if (Math.floor(game.tick / 12) % 2 === 0) {
     ctx.fillStyle = P.yellow;

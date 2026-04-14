@@ -65,7 +65,15 @@ function drawCaption(ctx, text) {
 
 // Facing index mapping (matches entities/player.js FACE):
 //   0=up, 1=right, 2=down, 3=left
+
+// Dispatcher: each script has its own choreography function. For now both
+// FARM_ESCAPE and MARKET_ESCAPE reuse the same base choreography (backflip +
+// moonwalk + dab + sprint). Market gets its own bespoke visuals in M9-e.
 export function drawCutscene(ctx, cs, alpha) {
+  drawFarmStyleEscape(ctx, cs, alpha);
+}
+
+function drawFarmStyleEscape(ctx, cs, alpha) {
   const t = cs.t + alpha;
 
   drawBackground(ctx, t);

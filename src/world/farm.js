@@ -1,8 +1,22 @@
 // World 1 — The Farm. Hand-authored 20x15 tilemap + building definitions.
+// Exports the uniform world interface — see world/index.js for the contract.
 
 import { Level, TILE_TYPES as T } from './level.js';
 import { GRID_W, GRID_H } from '../config.js';
 import { createBuilding } from '../entities/building.js';
+
+export const name = 'The Farm';
+export const worldNum = 1;
+export const playerStart = { col: 10, row: 7 };
+export const chumpStart  = { col: 14, row: 5 };
+export const catchesNeeded = 2;
+export const planTimer  = 200;
+export const chaseTimer = 600;
+export const cutsceneScript = 'FARM_ESCAPE';
+
+export function inventory() {
+  return { net: 3, banana: 2, cage: 1 };
+}
 
 // Legend:
 //   . grass       , dirt        F fence_h    W pond      H hay
@@ -41,7 +55,7 @@ const CHAR_TO_TILE = {
   'K': T.TACO_TRUCK_R,
 };
 
-export function createFarm() {
+export function createLevel() {
   const tiles = new Array(GRID_W * GRID_H);
   for (let row = 0; row < GRID_H; row++) {
     for (let col = 0; col < GRID_W; col++) {
@@ -52,7 +66,7 @@ export function createFarm() {
   return new Level(GRID_W, GRID_H, tiles);
 }
 
-export function createFarmBuildings() {
+export function createBuildings() {
   return [
     createBuilding(
       'Barn',
@@ -75,11 +89,15 @@ export function createFarmBuildings() {
   ];
 }
 
-// Starting positions for non-essential NPC townspeople (wander on grass, panic near Chump).
-export function createFarmTownies() {
+export function createTownies() {
   return [
     { col: 3,  row: 11, variant: 0 },
     { col: 17, row: 12, variant: 1 },
     { col: 10, row: 13, variant: 2 },
   ];
 }
+
+// --- Legacy aliases (still imported by older code paths — safe to keep) ---
+export { createLevel as createFarm };
+export { createBuildings as createFarmBuildings };
+export { createTownies as createFarmTownies };

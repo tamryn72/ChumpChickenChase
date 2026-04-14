@@ -27,6 +27,7 @@ globalThis.performance = { now: () => Date.now() };
 
 // --- imports ---
 const { createRng } = await import('../src/rng.js');
+const { WORLDS, getWorldDef, WORLD_ORDER } = await import('../src/world/index.js');
 const { createFarm, createFarmBuildings, createFarmTownies } = await import('../src/world/farm.js');
 const { createPlayer, tickPlayer } = await import('../src/entities/player.js');
 const {
@@ -178,6 +179,68 @@ try {
   const saveC = loadSave();
   if (saveC.worldsUnlocked !== 2) throw new Error('save did not persist through roundtrip');
   if (saveC.bestStats[1].buildingsSaved !== 7) throw new Error('bestStats roundtrip lost data');
+
+  // --- M9: world registry exercise ---
+  // Load each world and run 300 ticks of AI against it to catch
+  // world-specific tile / AI interaction bugs.
+  const worldNums = Object.keys(WORLDS).map(Number).sort((a, b) => a - b);
+  for (const wn of worldNums) {
+    const wdef = getWorldDef(wn);
+    if (!wdef) throw new Error('registry missing world ' + wn);
+    if (typeof wdef.createLevel !== 'function') throw new Error('world ' + wn + ' missing createLevel');
+    if (typeof wdef.createBuildings !== 'function') throw new Error('world ' + wn + ' missing createBuildings');
+    if (typeof wdef.createTownies !== 'function') throw new Error('world ' + wn + ' missing createTownies');
+    const wlvl = wdef.createLevel();
+    const wbldgs = wdef.createBuildings();
+    const wtownies = wdef.createTownies().map((t) => createTownie(t.col, t.row, t.variant));
+    const wplayer = createPlayer(wdef.playerStart.col, wdef.playerStart.row);
+    const wchump = createChump(wdef.chumpStart.col, wdef.chumpStart.row);
+    const wparticles = createParticles(wlvl);
+    const wbubbles = createBubbles();
+    const wpickups = [];
+    const wtraps = [];
+    const wprojectiles = [];
+    const whooks = {
+      ...hooks,
+      addGoo:     (col, row)  => addGoo(wparticles, col, row),
+      addFeather: (x, y, r)   => addFeather(wparticles, x, y, r),
+      onDestroy:  (c, b) => {
+        const { destroyBuilding: db } = globalThis.__buildingModule || {};
+        if (db) db(b, wlvl, T.RUBBLE);
+        else {
+          // fallback: just zero hp (already done by chicken.js)
+          for (const [col, row] of b.tiles) wlvl.set(col, row, T.RUBBLE);
+        }
+      },
+      spawnEgg:   (fc, fr, tc, tr) => wprojectiles.push(createEgg(fc, fr, tc, tr)),
+    };
+    const wctx = { level: wlvl, rng, hooks: whooks, traps: wtraps, buildings: wbldgs, pickups: wpickups, player: wplayer };
+    for (let i = 0; i < 300; i++) {
+      tickPlayer(wplayer, wlvl);
+      tickChump(wchump, wctx);
+      for (let j = wprojectiles.length - 1; j >= 0; j--) {
+        if (tickProjectile(wprojectiles[j])) wprojectiles.splice(j, 1);
+      }
+      for (const n of wtownies) tickTownie(n, wlvl, rng, wchump);
+      tickParticles(wparticles);
+      tickBubbles(wbubbles);
+    }
+    const wAlive = wbldgs.filter((b) => b.hp > 0).length;
+    console.log(`  world ${wn} (${wdef.name}): ` +
+                `buildings ${wAlive}/${wbldgs.length}, ` +
+                `chump ${wchump.col},${wchump.row}, ` +
+                `rage ${wchump.rage}`);
+  }
+
+  // Verify menu WORLD_ORDER shape
+  if (!Array.isArray(WORLD_ORDER) || WORLD_ORDER.length !== 5) {
+    throw new Error('WORLD_ORDER should have 5 entries, got ' + WORLD_ORDER.length);
+  }
+  for (const entry of WORLD_ORDER) {
+    if (typeof entry.num !== 'number') throw new Error('WORLD_ORDER missing num');
+    if (typeof entry.name !== 'string') throw new Error('WORLD_ORDER missing name');
+    if (typeof entry.exists !== 'boolean') throw new Error('WORLD_ORDER missing exists');
+  }
 
   const alive = buildings.filter((b) => b.hp > 0).length;
   console.log('smoke: OK');

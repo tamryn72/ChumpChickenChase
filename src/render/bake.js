@@ -21,6 +21,18 @@ export function bakeAll() {
   cache.bake('tile_taco_l',    TILE, TILE, tiles.drawTacoTruckL);
   cache.bake('tile_taco_r',    TILE, TILE, tiles.drawTacoTruckR);
 
+  // W2 Market
+  cache.bake('tile_cobble',      TILE, TILE, tiles.drawCobble);
+  cache.bake('tile_fruit_stand', TILE, TILE, tiles.drawFruitStand);
+  cache.bake('tile_apple_cart',  TILE, TILE, tiles.drawAppleCart);
+  cache.bake('tile_fish_cart',   TILE, TILE, tiles.drawFishCart);
+  cache.bake('tile_bakery',      TILE, TILE, tiles.drawBakery);
+  cache.bake('tile_restaurant',  TILE, TILE, tiles.drawRestaurant);
+  cache.bake('tile_flower_shop', TILE, TILE, tiles.drawFlowerShop);
+  cache.bake('tile_fountain',    TILE, TILE, tiles.drawFountain);
+  cache.bake('tile_clock_top',   TILE, TILE, tiles.drawClockTop);
+  cache.bake('tile_clock_base',  TILE, TILE, tiles.drawClockBase);
+
   // --- player (16x16) ---
   cache.bake('player_up_0',    16, 16, sprites.drawPlayerUp0);
   cache.bake('player_up_1',    16, 16, sprites.drawPlayerUp1);

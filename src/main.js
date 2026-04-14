@@ -8,7 +8,7 @@ import { bakeAll } from './render/bake.js';
 import { render } from './render/renderer.js';
 import { drawMenu, drawScore } from './render/menu.js';
 import { drawCutscene } from './render/cutscene.js';
-import { createFarm, createFarmBuildings, createFarmTownies } from './world/farm.js';
+import { getWorldDef, WORLD_ORDER } from './world/index.js';
 import { TILE_TYPES as T } from './world/level.js';
 import { createPlayer, tickPlayer } from './entities/player.js';
 import {
@@ -43,15 +43,8 @@ ctx.imageSmoothingEnabled = false;
 bakeAll();
 
 // --- helpers ---
-function canonInventory() {
-  return { net: 3, banana: 2, cage: 1 };
-}
-function canonInventoryTotal() {
-  const inv = canonInventory();
-  return inv.net + inv.banana + inv.cage;
-}
-function buildTownies() {
-  return createFarmTownies().map((t) => createTownie(t.col, t.row, t.variant));
+function manhattan(a, b) {
+  return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
 }
 function freshStats() {
   return {
@@ -65,74 +58,97 @@ function freshStats() {
     tacosChump:   0,
   };
 }
-function manhattan(a, b) {
-  return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
-}
 
-// --- game state ---
-const level = createFarm();
+// --- game state (mutated by loadWorld) ---
 const game = {
-  state: QUICKSTART ? 'PLAN' : 'MENU',
+  state: 'MENU',
   tick: 0,
   rng: createRng(42),
-  level,
-  player: createPlayer(10, 7),
-  chump: createChump(14, 5),
-  particles: createParticles(level),
+  // world-dependent (set by loadWorld)
+  worldNum: 1,
+  worldName: 'The Farm',
+  worldDef: null,
+  level: null,
+  player: null,
+  chump: null,
+  particles: null,
   bubbles: createBubbles(),
-  buildings: createFarmBuildings(),
+  buildings: [],
   traps: [],
   projectiles: [],
   pickups: [],
-  townies: buildTownies(),
+  townies: [],
   pickupTimers: { taco: 120, burger: 180, cat: 240 },
   shake: 0,
-  planTimer: 200,
-  chaseTimer: 600,
+  planTimer: 0,
+  chaseTimer: 0,
   catches: 0,
   catchesNeeded: 2,
   selectedTrap: TRAP_TYPES.NET,
-  inventory: canonInventory(),
+  inventory: { net: 3, banana: 2, cage: 1 },
   hoverCol: -1,
   hoverRow: -1,
   gotchaTicks: 0,
   stats: freshStats(),
-  result: null,        // 'won' | 'lost' — set when transitioning to ESCAPE_CUTSCENE / SCORE
-  resultStats: null,   // snapshot saved for SCORE screen
+  result: null,
+  resultStats: null,
   cutscene: null,
   save: loadSave(),
-  worldNum: 1,
+  // menu state
+  menuIndex: 0,
 };
 
-function resetLevelFresh() {
-  const freshLevel = createFarm();
-  game.level = freshLevel;
-  game.buildings = createFarmBuildings();
-  game.planTimer = 200;
-  game.chaseTimer = 600;
-  game.catches = 0;
+function loadWorld(num) {
+  const def = getWorldDef(num);
+  if (!def) {
+    console.warn('loadWorld: unknown world', num);
+    return;
+  }
+  game.worldNum     = num;
+  game.worldName    = def.name;
+  game.worldDef     = def;
+  game.level        = def.createLevel();
+  game.buildings    = def.createBuildings();
+  game.townies      = def.createTownies().map((t) => createTownie(t.col, t.row, t.variant));
+  game.player       = createPlayer(def.playerStart.col, def.playerStart.row);
+  game.chump        = createChump(def.chumpStart.col, def.chumpStart.row);
+  game.particles    = createParticles(game.level);
+  game.bubbles      = createBubbles();
   game.traps.length = 0;
   game.projectiles.length = 0;
   game.pickups.length = 0;
   game.pickupTimers = { taco: 120, burger: 180, cat: 240 };
-  game.townies = buildTownies();
   game.shake = 0;
-  game.inventory = canonInventory();
-  game.selectedTrap = TRAP_TYPES.NET;
-  game.player = createPlayer(10, 7);
-  game.chump = createChump(14, 5);
-  game.particles = createParticles(freshLevel);
-  game.bubbles = createBubbles();
+  game.planTimer     = def.planTimer;
+  game.chaseTimer    = def.chaseTimer;
+  game.catches       = 0;
+  game.catchesNeeded = def.catchesNeeded;
+  game.selectedTrap  = TRAP_TYPES.NET;
+  game.inventory     = def.inventory();
+  game.hoverCol = -1;
+  game.hoverRow = -1;
   game.gotchaTicks = 0;
   game.stats = freshStats();
   game.result = null;
   game.resultStats = null;
   game.cutscene = null;
+  game.state = 'PLAN';
 }
 
 function startLevelFromMenu() {
-  resetLevelFresh();
-  game.state = 'PLAN';
+  const picked = WORLD_ORDER[game.menuIndex];
+  if (!picked || !picked.exists) return;
+  if (picked.num > game.save.worldsUnlocked) return;
+  loadWorld(picked.num);
+}
+
+// boot either straight into PLAN (dev quickstart) or into MENU
+if (QUICKSTART) {
+  loadWorld(1);
+} else {
+  // still need non-null placeholders so renderer doesn't crash if called
+  loadWorld(1);
+  game.state = 'MENU';
 }
 
 function snapshotStats() {
@@ -155,7 +171,8 @@ function snapshotStats() {
 function enterEscapeCutscene() {
   game.result = 'won';
   game.resultStats = snapshotStats();
-  game.cutscene = createCutscene('FARM_ESCAPE');
+  const scriptName = game.worldDef?.cutsceneScript || 'FARM_ESCAPE';
+  game.cutscene = createCutscene(scriptName);
   game.state = 'ESCAPE_CUTSCENE';
 }
 
@@ -223,7 +240,6 @@ canvas.addEventListener('click', (e) => {
     const { col, row } = canvasToGrid(e);
     tryPlaceTrap(col, row);
   }
-  // all other states respond to keyboard, not click, now
 });
 
 function tryPlaceTrap(col, row) {
@@ -253,7 +269,8 @@ function respawnChumpFarFromPlayer() {
       return;
     }
   }
-  game.chump = createChump(14, 5);
+  const fallback = game.worldDef?.chumpStart || { col: 14, row: 5 };
+  game.chump = createChump(fallback.col, fallback.row);
 }
 
 // --- pickup collection ---
@@ -315,26 +332,33 @@ function hasIdlePickup(g, type) {
 
 function spawnPickup(g, type) {
   if (type === PICKUP_TYPES.TACO) {
-    const truck = g.buildings.find((b) => b.name === 'Taco Truck' && b.hp > 0);
-    if (!truck) return;
-    for (const [tc, tr] of truck.tiles) {
-      for (const [dc, dr] of [[0,1],[1,0],[0,-1],[-1,0],[1,1],[-1,1]]) {
-        const c = tc + dc;
-        const r = tr + dr;
-        if (g.level.isWalkable(c, r) && !pickupAt(g.pickups, c, r)) {
-          g.pickups.push(createPickup(PICKUP_TYPES.TACO, c, r));
-          return;
+    // tacos spawn adjacent to the Taco Truck if the world has one
+    const truck = g.buildings.find(
+      (b) => b.name === 'Taco Truck' && b.hp > 0,
+    );
+    if (truck) {
+      for (const [tc, tr] of truck.tiles) {
+        for (const [dc, dr] of [[0,1],[1,0],[0,-1],[-1,0],[1,1],[-1,1]]) {
+          const c = tc + dc;
+          const r = tr + dr;
+          if (g.level.isWalkable(c, r) && !pickupAt(g.pickups, c, r)) {
+            g.pickups.push(createPickup(PICKUP_TYPES.TACO, c, r));
+            return;
+          }
         }
       }
+      return;
     }
-    return;
+    // no taco truck in this world — fall through to random walkable tile
   }
   for (let attempt = 0; attempt < 30; attempt++) {
     const c = g.rng.int(1, g.level.w - 2);
     const r = g.rng.int(1, g.level.h - 2);
     if (!g.level.isWalkable(c, r)) continue;
     const tile = g.level.at(c, r);
-    if (tile !== T.GRASS && tile !== T.DIRT && tile !== T.RUBBLE) continue;
+    // walkable floor types across worlds
+    const ok = tile === T.GRASS || tile === T.DIRT || tile === T.RUBBLE || tile === T.COBBLE;
+    if (!ok) continue;
     if (pickupAt(g.pickups, c, r)) continue;
     if (manhattan({ col: c, row: r }, g.player) < 3) continue;
     g.pickups.push(createPickup(type, c, r));
@@ -391,6 +415,12 @@ function tick(g) {
   g.tick += 1;
 
   if (g.state === 'MENU') {
+    if (input.wasPressed('ArrowDown') || input.wasPressed('KeyS')) {
+      g.menuIndex = Math.min(WORLD_ORDER.length - 1, g.menuIndex + 1);
+    }
+    if (input.wasPressed('ArrowUp') || input.wasPressed('KeyW')) {
+      g.menuIndex = Math.max(0, g.menuIndex - 1);
+    }
     if (input.wasPressed('Enter')) {
       startLevelFromMenu();
     }
@@ -525,7 +555,10 @@ function frame(now) {
     ctx.font = '10px ui-monospace, monospace';
     ctx.textAlign = 'left';
     ctx.fillText(TITLE, 4, 44);
-    ctx.fillText('tick ' + game.tick + '  state ' + game.state, 4, 56);
+    ctx.fillText(
+      'tick ' + game.tick + '  state ' + game.state + '  world ' + game.worldNum,
+      4, 56,
+    );
     if (game.state === 'CHASE' || game.state === 'GOTCHA' || game.state === 'PLAN') {
       ctx.fillText(
         'player ' + game.player.col + ',' + game.player.row +

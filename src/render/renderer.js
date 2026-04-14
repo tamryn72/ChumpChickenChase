@@ -28,6 +28,17 @@ const TILE_KEY = {
   [T.RUBBLE]:       'tile_rubble',
   [T.TACO_TRUCK_L]: 'tile_taco_l',
   [T.TACO_TRUCK_R]: 'tile_taco_r',
+  // W2 Market
+  [T.COBBLE]:       'tile_cobble',
+  [T.BAKERY]:       'tile_bakery',
+  [T.RESTAURANT]:   'tile_restaurant',
+  [T.CLOCK_TOP]:    'tile_clock_top',
+  [T.CLOCK_BASE]:   'tile_clock_base',
+  [T.FOUNTAIN]:     'tile_fountain',
+  [T.FRUIT_STAND]:  'tile_fruit_stand',
+  [T.APPLE_CART]:   'tile_apple_cart',
+  [T.FISH_CART]:    'tile_fish_cart',
+  [T.FLOWER_SHOP]:  'tile_flower_shop',
 };
 
 const PLAYER_KEYS = {

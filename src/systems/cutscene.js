@@ -12,6 +12,16 @@ export const CUTSCENE_SCRIPTS = {
       { at: 138, ttl: 28, text: 'see you at the market' },
     ],
   },
+  MARKET_ESCAPE: {
+    totalTicks: 200,
+    captions: [
+      { at: 0,   ttl: 32, text: 'flipped the fruit stand' },
+      { at: 35,  ttl: 32, text: 'orange tidal wave rising' },
+      { at: 72,  ttl: 32, text: 'COWABUNGA' },
+      { at: 110, ttl: 32, text: 'surfs own goo, somehow' },
+      { at: 150, ttl: 40, text: 'see you at the docks' },
+    ],
+  },
 };
 
 export function createCutscene(scriptName) {
