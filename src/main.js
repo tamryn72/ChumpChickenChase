@@ -6,7 +6,7 @@ import {
 import { createRng } from './rng.js';
 import { bakeAll } from './render/bake.js';
 import { render } from './render/renderer.js';
-import { drawMenu, drawScore } from './render/menu.js';
+import { drawMenu, drawScore, drawPause } from './render/menu.js';
 import { drawCutscene } from './render/cutscene.js';
 import { getWorldDef, WORLD_ORDER } from './world/index.js';
 import { TILE_TYPES as T } from './world/level.js';
@@ -27,11 +27,12 @@ import {
 import { createTownie, tickTownie } from './entities/npc.js';
 import {
   createParticles, tickParticles, addGoo, addFeather,
-  addDebrisBurst, addAttackSpark, addEggSplat,
+  addDebrisBurst, addAttackSpark, addEggSplat, setMotionScale,
 } from './systems/particles.js';
 import { createBubbles, tickBubbles, say } from './systems/bubbles.js';
 import { createCutscene, tickCutscene, endCutscene } from './systems/cutscene.js';
 import { loadSave, saveSave, recordRun } from './systems/save.js';
+import { playSfx, setSfxMuted, kickAudio } from './audio/sfx.js';
 import { input } from './input.js';
 
 // --- canvas + context ---
@@ -43,9 +44,32 @@ ctx.imageSmoothingEnabled = false;
 
 bakeAll();
 
+// Apply save-backed accessibility settings before any game state is built.
+const bootSave = loadSave();
+setSfxMuted(bootSave.settings?.muted === true);
+setMotionScale(bootSave.settings?.reducedMotion ? 0.35 : 1);
+// Prime the AudioContext on first user gesture (autoplay policy).
+function primeAudioOnce() {
+  kickAudio();
+  window.removeEventListener('keydown', primeAudioOnce);
+  window.removeEventListener('mousedown', primeAudioOnce);
+  window.removeEventListener('touchstart', primeAudioOnce);
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', primeAudioOnce);
+  window.addEventListener('mousedown', primeAudioOnce);
+  window.addEventListener('touchstart', primeAudioOnce);
+}
+
 // --- helpers ---
 function manhattan(a, b) {
   return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
+}
+// Shake accumulator with reduced-motion respect. Anything that wanted to
+// bump the camera goes through this so the setting can clamp it globally.
+function addShake(amt) {
+  if (game.save?.settings?.reducedMotion) return;
+  game.shake = Math.max(game.shake, amt);
 }
 function freshStats() {
   return {
@@ -96,9 +120,13 @@ const game = {
   result: null,
   resultStats: null,
   cutscene: null,
-  save: loadSave(),
+  save: bootSave,
   // menu state
   menuIndex: 0,
+  menuColumn: 'worlds',  // 'worlds' | 'settings' — right-pane focus
+  menuSettingIndex: 0,   // which setting row is highlighted when column==='settings'
+  paused: false,         // in-chase pause overlay
+  pauseIndex: 0,
 };
 
 function loadWorld(num) {
@@ -144,7 +172,96 @@ function startLevelFromMenu() {
   const picked = WORLD_ORDER[game.menuIndex];
   if (!picked || !picked.exists) return;
   if (picked.num > game.save.worldsUnlocked) return;
+  playSfx('menu_select');
   loadWorld(picked.num);
+}
+
+// --- menu interaction (world list + settings column) ---
+const SETTING_KEYS = ['muted', 'reducedMotion', 'highContrast'];
+
+function tickMenu(g) {
+  // column toggle with Tab / Left / Right arrow
+  if (input.wasPressed('Tab') || input.wasPressed('ArrowLeft') || input.wasPressed('ArrowRight')) {
+    g.menuColumn = (g.menuColumn === 'worlds') ? 'settings' : 'worlds';
+    playSfx('menu_cursor');
+  }
+  if (g.menuColumn === 'worlds') {
+    if (input.wasPressed('ArrowDown') || input.wasPressed('KeyS')) {
+      g.menuIndex = Math.min(WORLD_ORDER.length - 1, g.menuIndex + 1);
+      playSfx('menu_cursor');
+    }
+    if (input.wasPressed('ArrowUp') || input.wasPressed('KeyW')) {
+      g.menuIndex = Math.max(0, g.menuIndex - 1);
+      playSfx('menu_cursor');
+    }
+    if (input.wasPressed('Enter')) {
+      startLevelFromMenu();
+    }
+  } else {
+    if (input.wasPressed('ArrowDown') || input.wasPressed('KeyS')) {
+      g.menuSettingIndex = Math.min(SETTING_KEYS.length - 1, g.menuSettingIndex + 1);
+      playSfx('menu_cursor');
+    }
+    if (input.wasPressed('ArrowUp') || input.wasPressed('KeyW')) {
+      g.menuSettingIndex = Math.max(0, g.menuSettingIndex - 1);
+      playSfx('menu_cursor');
+    }
+    if (input.wasPressed('Enter') || input.wasPressed('Space')) {
+      toggleSetting(g, SETTING_KEYS[g.menuSettingIndex]);
+    }
+  }
+  // M is a global mute toggle from anywhere
+  if (input.wasPressed('KeyM')) {
+    toggleSetting(g, 'muted');
+  }
+}
+
+function toggleSetting(g, key) {
+  const s = g.save.settings;
+  s[key] = !s[key];
+  if (key === 'muted')         setSfxMuted(s.muted);
+  if (key === 'reducedMotion') setMotionScale(s.reducedMotion ? 0.35 : 1);
+  saveSave(g.save);
+  playSfx('menu_select');
+}
+
+// --- in-chase pause overlay ---
+// Entries: RESUME, toggle muted, toggle reducedMotion, toggle highContrast, QUIT
+const PAUSE_ENTRIES = [
+  { kind: 'resume' },
+  { kind: 'setting', key: 'muted' },
+  { kind: 'setting', key: 'reducedMotion' },
+  { kind: 'setting', key: 'highContrast' },
+  { kind: 'quit' },
+];
+function tickPauseMenu(g) {
+  if (input.wasPressed('Escape') || input.wasPressed('KeyP')) {
+    g.paused = false;
+    playSfx('menu_back');
+    return;
+  }
+  if (input.wasPressed('ArrowDown') || input.wasPressed('KeyS')) {
+    g.pauseIndex = Math.min(PAUSE_ENTRIES.length - 1, g.pauseIndex + 1);
+    playSfx('menu_cursor');
+  }
+  if (input.wasPressed('ArrowUp') || input.wasPressed('KeyW')) {
+    g.pauseIndex = Math.max(0, g.pauseIndex - 1);
+    playSfx('menu_cursor');
+  }
+  if (input.wasPressed('Enter') || input.wasPressed('Space')) {
+    const entry = PAUSE_ENTRIES[g.pauseIndex];
+    if (entry.kind === 'resume') {
+      g.paused = false;
+      playSfx('menu_select');
+    } else if (entry.kind === 'setting') {
+      toggleSetting(g, entry.key);
+    } else if (entry.kind === 'quit') {
+      playSfx('menu_back');
+      g.paused = false;
+      game.state = 'MENU';
+    }
+  }
+  if (input.wasPressed('KeyM')) toggleSetting(g, 'muted');
 }
 
 // boot either straight into PLAN (dev quickstart) or into MENU
@@ -179,6 +296,7 @@ function enterEscapeCutscene() {
   const scriptName = game.worldDef?.cutsceneScript || 'FARM_ESCAPE';
   game.cutscene = createCutscene(scriptName);
   game.state = 'ESCAPE_CUTSCENE';
+  playSfx('victory');
 }
 
 function enterScore(result) {
@@ -193,10 +311,14 @@ function enterScore(result) {
 const chumpHooks = {
   addGoo:     (col, row)  => addGoo(game.particles, col, row),
   addFeather: (x, y, rng) => addFeather(game.particles, x, y, rng),
-  onTrapped:  (c) => say(game.bubbles, c, game.rng.pick(STUN_BUBBLES),   'hit', 30, 22),
+  onTrapped:  (c) => {
+    say(game.bubbles, c, game.rng.pick(STUN_BUBBLES), 'hit', 30, 22);
+    playSfx('trap_snap');
+  },
   onEscape:   (c) => say(game.bubbles, c, game.rng.pick(ESCAPE_BUBBLES), 'escape', 50, 22),
   onAttack:   (c, building, near) => {
     addAttackSpark(game.particles, near.col, near.row, game.rng);
+    playSfx('building_hit');
     if (game.rng.chance(0.3)) {
       say(game.bubbles, c, game.rng.pick(DESTROY_BUBBLES), 'destroy', 60, 22);
     }
@@ -210,23 +332,27 @@ const chumpHooks = {
       addDebrisBurst(game.particles, col, row, game.rng, 6);
     }
     say(game.bubbles, c, 'DEMOLISHED', 'destroy', 20, 30);
-    game.shake = Math.max(game.shake, 8);
+    addShake(8);
+    playSfx('building_destroy');
   },
   spawnEgg: (fc, fr, tc, tr, fiery = false) => {
     game.projectiles.push(createEgg(fc, fr, tc, tr, fiery));
+    playSfx('egg_throw');
   },
   sayEgg: (c) => say(game.bubbles, c, game.rng.pick(EGG_BUBBLES), 'egg', 40, 22),
   onFinalForm: (c) => {
     say(game.bubbles, c, game.rng.pick(FINAL_FORM_BUBBLES), 'finalform', 120, 40);
-    game.shake = Math.max(game.shake, 18);
+    addShake(18);
+    playSfx('final_form');
   },
   onReachPickup: (c, p) => collectForChump(game, p),
   onTeleport: (c, fromCol, fromRow, toCol, toRow, withClone) => {
     // sparkle burst at origin and destination so the jump reads
     addAttackSpark(game.particles, fromCol, fromRow, game.rng);
     addAttackSpark(game.particles, toCol,   toRow,   game.rng);
-    game.shake = Math.max(game.shake, 6);
+    addShake(6);
     say(game.bubbles, c, game.rng.pick(TELEPORT_BUBBLES), 'teleport', 40, 20);
+    playSfx('teleport');
     if (withClone) {
       // Clone cheat: leave a fake chump at the old location for 60 ticks
       game.decoys.push({
@@ -282,6 +408,7 @@ function tryPlaceTrap(col, row) {
   } else {
     game.traps.push(createTrap(key, col, row));
   }
+  playSfx('trap_place');
 }
 
 function respawnChumpFarFromPlayer() {
@@ -313,12 +440,14 @@ function collectForPlayer(g, p) {
     g.player.tacoBuff = 80;
     g.stats.tacosPlayer += 1;
     say(g.bubbles, g.player, 'TACOS!', 'player_pickup', 20, 20);
+    playSfx('pickup_taco');
     return;
   }
   if (p.type === PICKUP_TYPES.BURGER) {
     p.state = 'gone';
     g.player.burgerBait += 1;
     say(g.bubbles, g.player, 'BAIT ACQUIRED', 'player_pickup', 20, 20);
+    playSfx('pickup_burger');
     return;
   }
 }
@@ -335,6 +464,7 @@ function collectForChump(g, p) {
     g.chump.attackAnim = 8;
     g.stats.catsTossed += 1;
     say(g.bubbles, g.chump, g.rng.pick(CAT_BUBBLES), 'cat', 30, 26);
+    playSfx('pickup_cat');
     return;
   }
   if (p.type === PICKUP_TYPES.TACO) {
@@ -342,9 +472,10 @@ function collectForChump(g, p) {
     g.chump.stunTicks = 10;
     addRage(g.chump, 30);
     addEggSplat(g.particles, p.col, p.row, g.rng);
-    g.shake = Math.max(g.shake, 10);
+    addShake(10);
     g.stats.tacosChump += 1;
     say(g.bubbles, g.chump, g.rng.pick(TACO_HATE_BUBBLES), 'taco_hate', 15, 30);
+    playSfx('pickup_taco');
     return;
   }
   if (p.type === PICKUP_TYPES.BURGER) {
@@ -352,6 +483,7 @@ function collectForChump(g, p) {
     g.chump.burgerBuff = 80;
     g.stats.burgersChump += 1;
     say(g.bubbles, g.chump, g.rng.pick(BURGER_BUBBLES), 'burger', 30, 25);
+    playSfx('pickup_burger');
     return;
   }
 }
@@ -433,12 +565,14 @@ function tickProjectiles(g) {
       // gets stunned. Also damages any building on that tile (1hp).
       const d = Math.abs(g.player.col - p.targetCol) + Math.abs(g.player.row - p.targetRow);
       addDebrisBurst(g.particles, p.targetCol, p.targetRow, g.rng, 10);
-      g.shake = Math.max(g.shake, 10);
+      addShake(10);
+      playSfx('rock_land');
       if (d <= 1 && g.player.stunTicks === 0) {
         g.player.stunTicks = 8;
-        g.shake = Math.max(g.shake, 18);
+        addShake(18);
         g.stats.eggsHit += 1;
         say(g.bubbles, g.player, 'ROCK', 'rock_hit', 20, 16);
+        playSfx('player_hit');
       }
       // rock damages adjacent buildings
       for (const b of g.buildings) {
@@ -462,14 +596,16 @@ function tickProjectiles(g) {
     const fiery = p.kind === 'egg_fiery';
     if (d <= 1 && g.player.stunTicks === 0) {
       g.player.stunTicks = fiery ? 8 : 5;
-      g.shake = Math.max(g.shake, fiery ? 18 : 14);
+      addShake(fiery ? 18 : 14);
       addRage(g.chump, 5);
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
       g.stats.eggsHit += 1;
       say(g.bubbles, g.chump, fiery ? 'ROAST' : 'DIRECT HIT', 'egg_hit', 20, 22);
+      playSfx('egg_hit');
     } else {
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
       g.stats.eggsDodged += 1;
+      playSfx('egg_splat');
     }
     g.projectiles.splice(i, 1);
   }
@@ -497,6 +633,7 @@ function tickFallingRocks(g) {
   }
   if (tc === undefined) return;
   g.projectiles.push(createRock(tc, tr));
+  playSfx('rock_warn');
 }
 
 // --- tick routing by state ---
@@ -504,15 +641,7 @@ function tick(g) {
   g.tick += 1;
 
   if (g.state === 'MENU') {
-    if (input.wasPressed('ArrowDown') || input.wasPressed('KeyS')) {
-      g.menuIndex = Math.min(WORLD_ORDER.length - 1, g.menuIndex + 1);
-    }
-    if (input.wasPressed('ArrowUp') || input.wasPressed('KeyW')) {
-      g.menuIndex = Math.max(0, g.menuIndex - 1);
-    }
-    if (input.wasPressed('Enter')) {
-      startLevelFromMenu();
-    }
+    tickMenu(g);
   } else if (g.state === 'PLAN') {
     if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
     if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
@@ -529,6 +658,17 @@ function tick(g) {
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
   } else if (g.state === 'CHASE') {
+    // pause overlay toggles on ESC / P
+    if (input.wasPressed('Escape') || input.wasPressed('KeyP')) {
+      g.paused = !g.paused;
+      playSfx('menu_cursor');
+    }
+    if (g.paused) {
+      tickPauseMenu(g);
+      input.endFrame();
+      return;
+    }
+    if (input.wasPressed('KeyM')) toggleSetting(g, 'muted');
     if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
     if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
     if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
@@ -582,15 +722,18 @@ function tick(g) {
       say(g.bubbles, g.chump, 'NOT AGAIN', 'hit', 10, 20);
       g.state = 'GOTCHA';
       g.gotchaTicks = 15;
+      playSfx('gotcha');
     }
 
     if (g.chaseTimer <= 0 && g.state === 'CHASE') {
       say(g.bubbles, g.chump, 'HAHAHA LOSER', 'taunt', 1, 60);
+      playSfx('game_over');
       enterScore('lost');
     }
 
     if (allBuildingsDestroyed(g.buildings) && g.state === 'CHASE') {
       say(g.bubbles, g.chump, 'TOTAL DESTRUCTION', 'destroy', 1, 60);
+      playSfx('game_over');
       enterScore('lost');
     }
   } else if (g.state === 'GOTCHA') {
@@ -633,18 +776,45 @@ function tick(g) {
 function renderFrame(alpha) {
   if (game.state === 'MENU') {
     drawMenu(ctx, game, game.save);
+    drawAccessibilityOverlay(ctx);
     return;
   }
   if (game.state === 'ESCAPE_CUTSCENE') {
     drawCutscene(ctx, game.cutscene, alpha);
+    drawAccessibilityOverlay(ctx);
     return;
   }
   if (game.state === 'SCORE') {
     render(ctx, game, alpha);
     drawScore(ctx, game);
+    drawAccessibilityOverlay(ctx);
     return;
   }
   render(ctx, game, alpha);
+  if (game.state === 'CHASE' && game.paused) {
+    drawPause(ctx, game);
+  }
+  drawAccessibilityOverlay(ctx);
+}
+
+// High-contrast overlay: adds a faint border + darkens the edges so sprites
+// pop against a high-contrast frame. Applied last so it's over everything.
+function drawAccessibilityOverlay(ctx) {
+  if (!game.save?.settings?.highContrast) return;
+  // border
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1, 1, CANVAS_W - 2, CANVAS_H - 2);
+  ctx.lineWidth = 1;
+  // vignette
+  const g = ctx.createRadialGradient(
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_H / 3,
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7,
+  );
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 }
 
 let accumulator = 0;

@@ -4,68 +4,103 @@
 
 ---
 
-## Last session — 2026-04-14 (M12 volcano)
+## Last session — 2026-04-14 (M13 polish pass)
 
-M12 shipped. All five worlds are now playable, and the game has a real ending. The 5-world Tier-3 scope described in PLAN.md is done — this is the first session since the docs were written that `save.gameComplete` can actually be true.
+M13 polish pass — sound, settings, accessibility, in-chase pause, dist build. Most of PLAN.md's M13 checkboxes now have good answers. Mobile touch is still parked.
 
-### What's actually running
+### What's new
 
-The menu now shows all five worlds as unlockable:
+**Sound**. `src/audio/sfx.js` is a small procedural Web Audio module. It lazy-inits its AudioContext on the first user gesture (respecting the autoplay policy) and silently no-ops if audio is unavailable. About 20 named effects are built from oscillators + filtered noise:
 
-1. **The Farm** — 2 catches, 20s plan / 60s chase, 3 nets + 2 bananas + 1 cage, Dodge only.
-2. **The Market** — 2 catches, cobblestone plaza + fountain/clock tower, + Glue + Corn Decoy traps, + Teleport cheat.
-3. **The Docks** — 3 catches, water + pier + lighthouse, + Pretty Hen + Burger Bait, + Swim cheat.
-4. **Castle Town** — 3 catches, maze-ish castle + village + catapult, + Cat Decoy trap, + Clone cheat.
-5. **The Volcano** — 3 catches, black-ash slopes with lava rivers. All four cheats on. Two new hazards: **falling rocks** drop from the peak onto the player's area (8t stun + area damage, cadence doubles in FINAL FORM), and **all thrown eggs come out as flaming eggs** (8t stun instead of 5, bigger shake, ROAST bubble). W5 final catch plays the `VOLCANO_VICTORY` cutscene (player lunges in, hoists chump, caldera erupts in confetti) and then the SCORE screen shows **GAME COMPLETE** in yellow with "ENTER for menu  R to PLAY AGAIN".
+- UI: `menu_cursor`, `menu_select`, `menu_back`
+- Plan/Chase: `trap_place`, `trap_snap`, `gotcha`
+- Combat: `egg_throw`, `egg_splat`, `egg_hit`, `player_hit`, `rock_warn`, `rock_land`
+- Building: `building_hit`, `building_destroy`
+- Pickups: `pickup_taco`, `pickup_burger`, `pickup_cat`
+- Chump: `final_form`, `teleport`, `chump_squawk`
+- State: `victory`, `game_over`
 
-### Volcano-specific files touched this session
+Call sites are wired through `main.js` — every major event now cues a sound. Global mute lives in save state and can be toggled with **M** at any time.
 
-- `src/world/level.js` — 11 new W5 tile types. LAVA added to SOLID. Player can't cross lava; chump's SWIM now treats WATER + LAVA as passable liquids in `chicken.js isStepAcceptable`.
-- `src/world/volcano.js` — new world module. Tilemap, 7 buildings, 4 townies. Exports `fallingRocks=true`, `flamingEggs=true`, `cheats=['dodge','teleport','swim','clone']`, `cutsceneScript='VOLCANO_VICTORY'`.
-- `src/world/index.js` — volcano registered in slot 5. WORLD_ORDER entry flipped to `exists: true`.
-- `src/render/tiles.js` + `render/bake.js` + `render/renderer.js` — 11 new procedural tile draws (ash, obsidian, lava, magma rock, volcano peak, stone hut, shrine, cauldron, crystal, lookout, forge). All baked + wired.
-- `src/entities/projectile.js` — `createEgg(fromCol, fromRow, targetCol, targetRow, fiery)` 5th arg. New `createRock(tc, tr)` with straight-drop pixel path.
-- `src/entities/chicken.js` — LAVA treated like WATER in `isStepAcceptable`. `maybeThrowEgg` reads `ctx.flamingEggs` and passes `fiery` flag to `hooks.spawnEgg`.
-- `src/main.js` — `tickFallingRocks(g)` spawns rocks from the peak when `worldDef.fallingRocks` is on (faster during final form, 55% biased toward the player's area). Rock landings damage any building on the target tile and stun the player if within 1 tile. `chumpHooks.spawnEgg` forwards fiery. `tickChump` ctx carries `flamingEggs`. Pickup spawnable-tile whitelist extended (ASH / OBSIDIAN / DOCK / PIER / CASTLE_FLOOR — docks & castle were latent bugs too). SCORE state accepts **R** on W5 win to replay.
-- `src/render/renderer.js` — `drawProjectiles` renders 3 variants: plain egg, fiery egg (glow halo), rock (dark chunk + growing red reticle shadow).
-- `src/systems/cutscene.js` — `VOLCANO_VICTORY` script, 240 ticks, 6 captions.
-- `src/render/cutscene.js` — `drawVolcanoVictory` choreography (walk-in → lunge → hoist → confetti → pose) + own volcano background + heat shimmer + confetti helper.
-- `src/systems/save.js` — `gameComplete` + `clears` flags in DEFAULT_SAVE, bumped in `recordRun` when W5 is cleared.
-- `src/render/menu.js` — score screen: **GAME COMPLETE** banner + "chump delivered — the town is saved" when worldNum===5 && won. "ENTER for menu  R to PLAY AGAIN" hint. Title-screen footer flips to "ALL WORLDS CLEARED — chump captured x N" once the save has been beaten.
-- `docs/TIMELINE.md` — M12 entry + backfilled missing M8/M9/M10/M11 entries the previous session never wrote.
-- `docs/PLAN.md` — M12 checkboxes marked done.
+**Settings persisted to save**. New nested object on the save:
+
+```js
+settings: { muted: false, reducedMotion: false, highContrast: false }
+```
+
+`systems/save.js` merges nested settings on load so existing saves pick up new fields without losing their state.
+
+**Menu settings column**. The title screen now has a **SETTINGS** panel below the world list. **Tab** / left / right jumps focus between the two columns; up/down cycles rows; Enter toggles the highlighted setting. The pulsing hint line shows contextual controls for whichever column is focused.
+
+**In-chase pause**. **ESC** or **P** during CHASE pops a pause overlay with `RESUME / SOUND / REDUCED MOTION / HIGH CONTRAST / QUIT TO MENU`. Ticks halt entirely while paused — no chump movement, no particles, no projectile advance.
+
+**Reduced motion** actually does something:
+
+- `addShake(amt)` is a new helper that wraps all screen-shake raises. Under reduced motion, shake is dropped entirely.
+- `systems/particles.js setMotionScale(0..1)` multiplies all burst sizes and lowers the feather-pool cap from 300 → 120. Default scale is 1; reduced motion sets it to 0.35.
+- Applied at boot and whenever the setting is toggled.
+
+**High contrast** is a post-render overlay: a 3px white border around the canvas + a radial-gradient vignette that darkens the edges so sprites pop.
+
+**Dist build**. `tools/build.mjs` is a tiny dependency-free ESM bundler tailored to this codebase. It walks `src/`, regex-parses imports and exports (named imports with `as` renames, `import * as`, grouped exports, multiline braces all handled), topologically sorts modules, wraps each in an IIFE with a `__exports` object, and inlines the concatenation into a copy of `index.html`. Output is a single double-clickable `dist/index.html` at ~214 KB.
+
+Run locally:
+
+```bash
+node tools/build.mjs
+```
+
+`dist/` is in `.gitignore` with a comment explaining how to undo that when ready to publish.
+
+### Files touched (branch `claude/m13-polish-pass`)
+
+- `src/audio/sfx.js` *(new)*
+- `src/main.js`
+- `src/render/menu.js`
+- `src/systems/save.js`
+- `src/systems/particles.js`
+- `tools/build.mjs` *(new)*
+- `.gitignore`
+- `docs/PLAN.md`, `docs/TIMELINE.md`, `docs/SESSION_HANDOFF.md`
 
 ### Smoke test
 
-`node tools/smoke.mjs` still passes. All 5 worlds boot + run 300 AI ticks each without crashing. W5 burns through buildings fast (0/7 after 300 ticks) because chump has all cheats and SWIM lets him cut straight across lava. The rock hazard path is not exercised by the smoke test (it's triggered in main.js tick routing, not in the test harness) — worth adding in a future pass.
+`node tools/smoke.mjs` — OK. All 5 worlds boot and tick.
+`node tools/build.mjs` — emits `dist/index.html` at 214 KB and the bundle parses + boots cleanly under node browser stubs.
 
-### Still not yet in / parked
+### Not yet in / parked
 
-- No in-browser playtest this session — bugs likely lurking, especially anything cosmetic in render or the final cutscene's choreography (sprite offsets, caption timing).
-- Sound / SFX still deferred to M13.
-- Mobile touch controls still deferred.
-- Single-file `dist/index.html` concat build script — not written yet.
-- **Future-upgrades wishlist from PLAN.md still parked**: Executive Clucks, Red Fox minions, arctic/ice level variant, proper spit-fire animation, cook NPC at the taco truck, SpeechSynthesis spoken taunts.
-- Falling-rock hazard damages buildings on its target tile — that could enable a degenerate "rocks destroy all buildings before you can trap chump" scenario on W5. Tune if it feels cheap.
+From PLAN.md's M13 list, still outstanding:
 
-### Branch
+- **Mobile touch d-pad + trap palette.** The biggest unchecked item. Needs touch event listeners, an on-screen d-pad + trap selector, and responsive layout. Probably a full session by itself.
+- **Menu juice / transitions / intro screen.** Title still just fades in as text. Could use a proper opening animation with chump stomping in and eggs flying.
+- **Performance audit.** Nothing currently feels slow. Defer until someone actually reports a slowdown.
 
-`claude/finish-volcano-level-mD4nR` — all M12 commits landed here. Base is `d19466c` (the merge of the earlier W1–W4 PR).
+Still parked from earlier sessions (future upgrades wishlist, see `docs/PLAN.md`):
+
+- Executive Clucks (Order for Speed, Supersonic Order, Red Foxes Directive, Icy Executive Cluck)
+- Red Fox minion mob
+- Proper spit-fire animation when chump eats a taco
+- Cook NPC at the taco truck
+- Spoken taunt experiment with SpeechSynthesis
+- Arctic / ice level variant
+
+### Risks worth flagging
+
+- No in-browser playtest from the Claude side this session. Sound effects are tuned by ear elsewhere but these are generated by ratios I pulled out of thin air — **first playtest should mute-check and volume-check every effect**. A runaway oscillator with the wrong peak gain will be unpleasant.
+- `AudioContext` is created on first user gesture. If a setting toggle happens before that gesture (it shouldn't — you need to click/key to toggle anyway), the sfx will silently no-op.
+- The dist bundler is regex-based. If anyone adds a default export (`export default`) or an export pattern the regex doesn't recognize, the build will silently leak an `export` statement. `tools/build.mjs` throws if the entry's imports can't be resolved, but it won't catch syntactic oddities mid-file. Grep the output for `^(import |export )` to sanity check.
 
 ---
 
 ## Picking this up next session
 
 1. Skim `CLAUDE.md` → `docs/MEMORY.md` → this file
-2. **Playtest all 5 worlds in a browser.** No code has actually been run in Chrome from the Claude side yet — runtime bugs are likely. Watch especially:
-   - Volcano tile rendering (11 new procedural draws)
-   - Falling rock collision with player / buildings
-   - Flaming egg visual + stun duration
-   - `VOLCANO_VICTORY` cutscene (player sprite + chump sprite + rope line + confetti)
-   - Final GAME COMPLETE score screen + R-to-replay
-3. Fix anything the playtest reveals.
-4. Candidate next milestones (user's call):
-   - **M13 polish** — mobile touch, sound, intro screen, accessibility
-   - **Future-upgrades wishlist** — Executive Clucks + Red Fox minions (the comedy payload the user parked)
-   - **Dist build script** — `tools/build.mjs` concat → `dist/index.html` for GitHub Pages / itch.io publish
-   - **Balance pass** — W5 in particular: chump with all cheats + rocks + flaming eggs is very mean, may need tuning
+2. **Playtest with sound.** First real audio pass — expect to retune a few effects. Volume-balance the master gain if things are too loud/quiet.
+3. Test the accessibility toggles on the title screen and in-chase pause.
+4. Run `node tools/build.mjs` and open `dist/index.html` directly (file:// URL) to confirm the single-file bundle actually works in a browser, not just under node stubs.
+5. Candidates for next milestone (user's call):
+   - **Mobile touch** — the big remaining M13 item
+   - **Intro / menu juice** — chump stomping in, title bounce, transition into PLAN
+   - **Wishlist mini-sprint** — Executive Clucks + Red Fox minions (the comedy payload)
+   - **Audio pass 2** — balance, more variants, maybe SpeechSynthesis experiment

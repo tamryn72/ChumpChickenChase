@@ -56,51 +56,93 @@ export function drawMenu(ctx, game, save) {
   ctx.font = 'bold 11px ui-monospace, monospace';
   ctx.fillText('ORANGE CHICKEN CHAOS', CANVAS_W / 2, 70);
 
-  // --- world list (right side) ---
+  // --- world list (right side, compact) ---
   const listX = 340;
-  const listY = 110;
-  const rowH = 24;
+  const listY = 100;
+  const rowH = 19;
+
+  const worldsFocused = game.menuColumn !== 'settings';
 
   ctx.textAlign = 'left';
   ctx.font = 'bold 10px ui-monospace, monospace';
-  ctx.fillStyle = P.white;
-  ctx.fillText('SELECT WORLD', listX, listY - 14);
+  ctx.fillStyle = worldsFocused ? P.white : P.darkGrey;
+  ctx.fillText('SELECT WORLD', listX, listY - 12);
 
   for (let i = 0; i < WORLD_ORDER.length; i++) {
     const w = WORLD_ORDER[i];
     const y = listY + i * rowH;
     const unlocked = w.num <= save.worldsUnlocked && w.exists;
-    const highlighted = i === game.menuIndex;
+    const highlighted = worldsFocused && i === game.menuIndex;
 
-    // selection bar
     if (highlighted) {
       ctx.fillStyle = unlocked ? 'rgba(255,102,0,0.28)' : 'rgba(255,0,77,0.18)';
-      ctx.fillRect(listX - 6, y - 12, 250, rowH - 4);
+      ctx.fillRect(listX - 6, y - 11, 250, rowH - 3);
       ctx.fillStyle = unlocked ? P.chumpOrange : P.darkGrey;
-      ctx.fillRect(listX - 6, y - 12, 2, rowH - 4);
+      ctx.fillRect(listX - 6, y - 11, 2, rowH - 3);
     }
 
-    // num + name
     let label = `${w.num}. ${w.name}`;
     if (!w.exists)      label += '  [SOON]';
     else if (!unlocked) label += '  [LOCKED]';
     else if (save.bestStats[w.num]) label += '  [x]';
 
-    ctx.fillStyle = unlocked ? (highlighted ? P.white : P.lightGrey) : P.darkGrey;
-    ctx.font = 'bold 12px ui-monospace, monospace';
+    ctx.fillStyle = unlocked
+      ? (highlighted ? P.white : (worldsFocused ? P.lightGrey : P.darkGrey))
+      : P.darkGrey;
+    ctx.font = 'bold 11px ui-monospace, monospace';
     ctx.fillText(label, listX, y);
 
-    // best score hint for beaten worlds
     const best = save.bestStats[w.num];
     if (best) {
-      ctx.font = '8px ui-monospace, monospace';
+      ctx.font = '7px ui-monospace, monospace';
       ctx.fillStyle = P.darkGrey;
       ctx.fillText(
-        `best: ${best.buildingsSaved}/${best.buildingsTotal} saved, ` +
+        `${best.buildingsSaved}/${best.buildingsTotal}, ` +
         `${(best.elapsedTicks / 10).toFixed(0)}s`,
-        listX + 8, y + 9,
+        listX + 160, y,
       );
     }
+  }
+
+  // --- settings panel (right side, below worlds) ---
+  const setX = listX;
+  const setY = listY + WORLD_ORDER.length * rowH + 16;
+  const settingsFocused = game.menuColumn === 'settings';
+
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 10px ui-monospace, monospace';
+  ctx.fillStyle = settingsFocused ? P.white : P.darkGrey;
+  ctx.fillText('SETTINGS', setX, setY - 12);
+
+  const rows = [
+    { key: 'muted',         label: 'SOUND',          onText: 'MUTED',  offText: 'ON' },
+    { key: 'reducedMotion', label: 'REDUCED MOTION', onText: 'ON',     offText: 'OFF' },
+    { key: 'highContrast',  label: 'HIGH CONTRAST',  onText: 'ON',     offText: 'OFF' },
+  ];
+  const srH = 15;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const y = setY + i * srH;
+    const value = save.settings?.[row.key] === true;
+    const highlighted = settingsFocused && i === game.menuSettingIndex;
+    if (highlighted) {
+      ctx.fillStyle = 'rgba(41,173,255,0.22)';
+      ctx.fillRect(setX - 6, y - 10, 250, srH - 2);
+      ctx.fillStyle = P.blue;
+      ctx.fillRect(setX - 6, y - 10, 2, srH - 2);
+    }
+    ctx.font = 'bold 10px ui-monospace, monospace';
+    ctx.fillStyle = settingsFocused ? (highlighted ? P.white : P.lightGrey) : P.darkGrey;
+    ctx.fillText(row.label, setX, y);
+    // value pill on the right
+    const pillText = value
+      ? (row.key === 'muted' ? row.onText : row.onText)
+      : (row.key === 'muted' ? row.offText : row.offText);
+    const showAsOn = row.key === 'muted' ? !value : value;
+    ctx.fillStyle = showAsOn ? P.green : P.darkGrey;
+    ctx.textAlign = 'right';
+    ctx.fillText(pillText, setX + 230, y);
+    ctx.textAlign = 'left';
   }
 
   // --- controls hint ---
@@ -108,7 +150,10 @@ export function drawMenu(ctx, game, save) {
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'center';
   if (Math.floor(game.tick / 14) % 2 === 0) {
-    ctx.fillText('ARROWS to pick  ENTER to play', CANVAS_W / 2, CANVAS_H - 34);
+    const hint = settingsFocused
+      ? 'UP/DOWN  ENTER toggle  TAB worlds'
+      : 'UP/DOWN  ENTER play  TAB settings';
+    ctx.fillText(hint, CANVAS_W / 2, CANVAS_H - 34);
   }
   ctx.fillStyle = P.darkGrey;
   ctx.font = '9px ui-monospace, monospace';
@@ -124,6 +169,59 @@ export function drawMenu(ctx, game, save) {
   ctx.fillText('chump chicken chase', 6, CANVAS_H - 6);
   ctx.textAlign = 'right';
   ctx.fillText('v0.1 dev', CANVAS_W - 6, CANVAS_H - 6);
+}
+
+// --- In-chase pause overlay ---
+
+export function drawPause(ctx, game) {
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 26px ui-monospace, monospace';
+  ctx.fillStyle = P.black;
+  ctx.fillText('PAUSED', CANVAS_W / 2 + 2, 100 + 2);
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillText('PAUSED', CANVAS_W / 2, 100);
+
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillText('ESC resume   UP/DOWN pick   ENTER toggle', CANVAS_W / 2, 126);
+
+  const rows = [
+    { label: 'RESUME' },
+    { label: 'SOUND',          settingKey: 'muted',         invert: true  },
+    { label: 'REDUCED MOTION', settingKey: 'reducedMotion', invert: false },
+    { label: 'HIGH CONTRAST',  settingKey: 'highContrast',  invert: false },
+    { label: 'QUIT TO MENU' },
+  ];
+
+  const startY = 170;
+  const rowH = 32;
+  ctx.textAlign = 'left';
+  const cx = CANVAS_W / 2;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const y = startY + i * rowH;
+    const highlighted = i === game.pauseIndex;
+    if (highlighted) {
+      ctx.fillStyle = 'rgba(255,102,0,0.28)';
+      ctx.fillRect(cx - 150, y - 18, 300, rowH - 6);
+      ctx.fillStyle = P.chumpOrange;
+      ctx.fillRect(cx - 150, y - 18, 3, rowH - 6);
+    }
+    ctx.font = 'bold 14px ui-monospace, monospace';
+    ctx.fillStyle = highlighted ? P.white : P.lightGrey;
+    ctx.fillText(r.label, cx - 130, y);
+    if (r.settingKey) {
+      const raw = game.save.settings?.[r.settingKey] === true;
+      const isOn = r.invert ? !raw : raw;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = isOn ? P.green : P.darkGrey;
+      ctx.fillText(isOn ? 'ON' : 'OFF', cx + 130, y);
+      ctx.textAlign = 'left';
+    }
+  }
 }
 
 // --- Score screen ---
