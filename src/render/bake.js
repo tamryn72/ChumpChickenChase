@@ -37,4 +37,12 @@ export function bakeAll() {
   cache.bake('chump_down_1',   24, 24, sprites.drawChumpDown1);
   cache.bake('chump_left_0',   24, 24, sprites.drawChumpLeft0);
   cache.bake('chump_left_1',   24, 24, sprites.drawChumpLeft1);
+
+  // --- traps (16x16) ---
+  cache.bake('trap_net',              16, 16, sprites.drawTrapNet);
+  cache.bake('trap_net_triggered',    16, 16, sprites.drawTrapNetTriggered);
+  cache.bake('trap_banana',           16, 16, sprites.drawTrapBanana);
+  cache.bake('trap_banana_triggered', 16, 16, sprites.drawTrapBananaTriggered);
+  cache.bake('trap_cage',             16, 16, sprites.drawTrapCage);
+  cache.bake('trap_cage_triggered',   16, 16, sprites.drawTrapCageTriggered);
 }

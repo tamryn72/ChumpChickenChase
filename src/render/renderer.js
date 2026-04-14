@@ -1,12 +1,14 @@
-// Main scene renderer. Draws level tiles, goo, entities, feathers, bubbles.
+// Main scene renderer. Draws level tiles, goo, traps, entities, feathers, bubbles, HUD.
 //
 // Render order each frame:
 //   1. clear
 //   2. level tiles
-//   3. goo (under entities)
-//   4. entities sorted by row (painter's algorithm for top-down depth)
-//   5. feathers (over entities)
-//   6. speech bubbles (always on top)
+//   3. goo (under entities + traps)
+//   4. traps
+//   5. entities sorted by row (painter's algorithm)
+//   6. feathers
+//   7. speech bubbles
+//   8. HUD + place cursor
 
 import { TILE, CANVAS_W, CANVAS_H } from '../config.js';
 import * as cache from './sprite-cache.js';
@@ -15,6 +17,7 @@ import { playerPixelPos, FACE } from '../entities/player.js';
 import { chumpPixelPos } from '../entities/chicken.js';
 import { drawGoo, drawFeathers } from '../systems/particles.js';
 import { drawBubbles } from '../systems/bubbles.js';
+import { drawHUD, drawPlaceCursor } from './ui.js';
 
 const TILE_KEY = {
   [T.GRASS]:     'tile_grass',
@@ -52,18 +55,28 @@ function drawLevel(ctx, level) {
   }
 }
 
+function drawTraps(ctx, traps) {
+  for (const t of traps) {
+    const key = 'trap_' + t.type + (t.triggered ? '_triggered' : '');
+    cache.draw(ctx, key, t.col * TILE + 8, t.row * TILE + 8);
+  }
+}
+
 function drawPlayer(ctx, p, alpha) {
   const { x, y } = playerPixelPos(p, alpha);
   const key = PLAYER_KEYS[p.facing][p.animFrame];
-  // 16x16 sprite centered in 32px tile
   cache.draw(ctx, key, x + 8, y + 8);
 }
 
 function drawChump(ctx, c, alpha) {
   const { x, y } = chumpPixelPos(c, alpha);
   const key = CHUMP_KEYS[c.facing][c.animFrame];
-  // 24x24 sprite centered in 32px tile
-  cache.draw(ctx, key, x + 4, y + 4);
+  // shake a little when stunned
+  let sx = 0, sy = 0;
+  if (c.stunTicks > 0) {
+    sx = (c.stunTicks % 2 === 0) ? 1 : -1;
+  }
+  cache.draw(ctx, key, x + 4 + sx, y + 4 + sy);
 }
 
 export function render(ctx, game, alpha) {
@@ -72,8 +85,8 @@ export function render(ctx, game, alpha) {
 
   drawLevel(ctx, game.level);
   drawGoo(ctx, game.particles);
+  drawTraps(ctx, game.traps);
 
-  // entities in row order (painter's algorithm)
   const entities = [];
   if (game.player) entities.push({ kind: 'player', e: game.player });
   if (game.chump)  entities.push({ kind: 'chump',  e: game.chump });
@@ -85,10 +98,12 @@ export function render(ctx, game, alpha) {
 
   drawFeathers(ctx, game.particles);
 
-  // speech bubbles on top — bubble tail anchors to entity's tile top-left
   drawBubbles(ctx, game.bubbles, (entity) => {
     if (entity === game.player) return playerPixelPos(entity, alpha);
     if (entity === game.chump)  return chumpPixelPos(entity, alpha);
     return null;
   });
+
+  drawPlaceCursor(ctx, game, game.hoverCol, game.hoverRow);
+  drawHUD(ctx, game);
 }
