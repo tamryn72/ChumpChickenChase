@@ -27,4 +27,14 @@ export function bakeAll() {
   cache.bake('player_down_1',  16, 16, sprites.drawPlayerDown1);
   cache.bake('player_left_0',  16, 16, sprites.drawPlayerLeft0);
   cache.bake('player_left_1',  16, 16, sprites.drawPlayerLeft1);
+
+  // --- chump (24x24) ---
+  cache.bake('chump_up_0',     24, 24, sprites.drawChumpUp0);
+  cache.bake('chump_up_1',     24, 24, sprites.drawChumpUp1);
+  cache.bake('chump_right_0',  24, 24, sprites.drawChumpRight0);
+  cache.bake('chump_right_1',  24, 24, sprites.drawChumpRight1);
+  cache.bake('chump_down_0',   24, 24, sprites.drawChumpDown0);
+  cache.bake('chump_down_1',   24, 24, sprites.drawChumpDown1);
+  cache.bake('chump_left_0',   24, 24, sprites.drawChumpLeft0);
+  cache.bake('chump_left_1',   24, 24, sprites.drawChumpLeft1);
 }
