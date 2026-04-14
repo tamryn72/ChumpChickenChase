@@ -2,6 +2,39 @@
 
 > Working answers to design and tech questions — best current thinking, not commandments. Anything here is open to change; raise it if it becomes friction.
 
+## Decided this conversation
+
+Things that landed firmly — not locked forever, but these are our real direction now:
+
+- **Game title**: **Chump Chicken Chase**
+- **Chicken name**: **Chump**
+- **Art approach**: **hybrid, leaning procedural**. Chump, the Player, and chaos NPCs are **full-body procedural animated pixel-art sprites** with multi-frame walk / run / idle / action animations. Emoji + procedural particles handle environmental chaos (fire, smoke, debris, eggs, goo, confetti) and background pickups. The "just emoji for the chicken" idea is out — Chump needs a real animated body.
+- **Scope**: **full 5-world game** (M1 through M12 + polish). Time is not a constraint. Do it right.
+- **Distribution**: dev as ES modules in `src/`, ship as a single `dist/index.html` built by a tiny concat script. Publish as an **indie game** on **GitHub Pages** and/or **itch.io**.
+- **Chaos vibe**: real chaos, not just a 1-on-1 chase. Townsperson NPCs running and screaming, buildings on fire, debris flying, particles everywhere. The world should feel like it's falling apart wherever Chump goes.
+- **Grid**: 20×15 tiles × 32px = 640×480 logical canvas. Current working size.
+- **Entry point scaffolded**: `index.html` + `src/{config,rng,main}.js` render the title screen and tick counter. Verified boot-ready.
+
+## New mechanic: Tacos & the Mexican food truck
+
+Player's counterpart to Chump's burger buff. Adds a race/defense layer to every level.
+
+- A **Mexican food truck** is parked on every map from W1 onward, staffed by a pixel **cook NPC**.
+- The cook periodically produces **tacos** on the truck window / nearby tiles on a timer.
+- **Player eats a taco** → short-duration buff: speed +, catch radius +, possible egg-stun immunity. Glow + particle flourish while buffed.
+- **Chump HATES tacos**. High-priority AI target — he aggressively goes for the truck and any loose tacos to destroy them. Priority sits between `CHASE_CAT` (mandatory) and `DESTROY_NEAREST`.
+- **If Chump eats a taco himself** → it backfires. Brief self-stun with a spit-fire animation + rage spike + taunt ("NOT THE TACOS!" / "MY BEAK, IT BURNS!"). Opens a catch window for the player.
+- **The food truck is protectable** — if Chump destroys it, no more tacos that level. Player wants to keep it alive.
+- Taco-specific Chump taunts: `"THIS TRUCK MINE NOW"`, `"QUIET, PIGGY, THE TACOS BELONG TO ME"`, `"I HATE TACOS, I HATE TACOS!"`, `"worst food, the absolute worst food, believe me"`.
+- The cook NPC has her own sprite + scream animation when Chump approaches.
+
+## Chaos NPCs (cosmetic but critical to feel)
+
+- Townspeople wander maps in calm state (farmer, shopkeeper, kid, tourist per world)
+- When Chump is within N tiles → they switch to PANIC state: run away, arms-up animation, occasional scream bubbles
+- No gameplay interaction with player — pure vibe
+- 2-3 NPC archetypes per world (minimum), varied palettes
+
 ## Architecture (current direction)
 
 - **Modules during dev**: native ES modules in `src/` for iteration sanity. How we ship (single HTML file vs served folder vs bundled) is still being discussed — see `PLAN.md` → "Design calls worth talking through."
