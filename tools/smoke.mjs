@@ -8,10 +8,16 @@
 // Exits 0 on success, 1 on any thrown error during tick loop.
 
 // --- stub browser globals BEFORE any import pulls config.js / input.js ---
+const fakeStorage = {};
 globalThis.window = {
   location: { search: '' },
   addEventListener: () => {},
   removeEventListener: () => {},
+  localStorage: {
+    getItem: (k) => (k in fakeStorage ? fakeStorage[k] : null),
+    setItem: (k, v) => { fakeStorage[k] = String(v); },
+    removeItem: (k) => { delete fakeStorage[k]; },
+  },
 };
 globalThis.document = {
   addEventListener: () => {},
@@ -39,6 +45,8 @@ const {
 } = await import('../src/entities/pickup.js');
 const { createTownie, tickTownie } = await import('../src/entities/npc.js');
 const { createEgg, tickProjectile } = await import('../src/entities/projectile.js');
+const { createCutscene, tickCutscene, endCutscene } = await import('../src/systems/cutscene.js');
+const { loadSave, saveSave, recordRun } = await import('../src/systems/save.js');
 
 // --- set up game state ---
 const rng = createRng(42);
@@ -141,6 +149,36 @@ try {
     }
   }
 
+  // --- M8: cutscene state machine ---
+  const cs = createCutscene('FARM_ESCAPE');
+  let cutsceneFinished = false;
+  for (let i = 0; i < cs.totalTicks + 5; i++) {
+    if (tickCutscene(cs)) { cutsceneFinished = true; break; }
+  }
+  if (!cutsceneFinished) throw new Error('cutscene never finished');
+  const cs2 = createCutscene('FARM_ESCAPE');
+  endCutscene(cs2);
+  if (cs2.t !== cs2.totalTicks) throw new Error('endCutscene did not jump to end');
+
+  // --- M8: save roundtrip ---
+  const saveA = loadSave();
+  if (saveA.worldsUnlocked !== 1) throw new Error('default save wrong');
+  const runStats = {
+    catches: 2, catchesNeeded: 2,
+    buildingsTotal: 9, buildingsSaved: 7,
+    elapsedTicks: 550, trapsPlaced: 6,
+    eggsDodged: 3, eggsHit: 1,
+    catsTossed: 1, burgersChump: 0,
+    tacosPlayer: 2, tacosChump: 1,
+  };
+  const saveB = recordRun(saveA, 1, 'won', runStats);
+  saveSave(saveB);
+  if (saveB.worldsUnlocked !== 2) throw new Error('worldsUnlocked did not advance');
+  if (!saveB.bestStats[1]) throw new Error('bestStats not recorded');
+  const saveC = loadSave();
+  if (saveC.worldsUnlocked !== 2) throw new Error('save did not persist through roundtrip');
+  if (saveC.bestStats[1].buildingsSaved !== 7) throw new Error('bestStats roundtrip lost data');
+
   const alive = buildings.filter((b) => b.hp > 0).length;
   console.log('smoke: OK');
   console.log('  ticks run         :', TICKS);
@@ -153,6 +191,8 @@ try {
   console.log('  bubbles active    :', bubbles.active.length);
   console.log('  pickups remaining :', pickups.length);
   console.log('  projectiles       :', projectiles.length);
+  console.log('  cutscene          : ticks=' + cs.t + '/' + cs.totalTicks);
+  console.log('  save              : worlds=' + saveC.worldsUnlocked, 'best[1]=', saveC.bestStats[1]);
 } catch (e) {
   console.error('smoke FAIL:', e);
   errors = 1;

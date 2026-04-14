@@ -1,9 +1,13 @@
 // Chump Chicken Chase — boot + game loop
 
-import { CANVAS_W, CANVAS_H, TILE, TICK_MS, DEBUG, TITLE } from './config.js';
+import {
+  CANVAS_W, CANVAS_H, TILE, TICK_MS, DEBUG, QUICKSTART, TITLE,
+} from './config.js';
 import { createRng } from './rng.js';
 import { bakeAll } from './render/bake.js';
 import { render } from './render/renderer.js';
+import { drawMenu, drawScore } from './render/menu.js';
+import { drawCutscene } from './render/cutscene.js';
 import { createFarm, createFarmBuildings, createFarmTownies } from './world/farm.js';
 import { TILE_TYPES as T } from './world/level.js';
 import { createPlayer, tickPlayer } from './entities/player.js';
@@ -25,6 +29,8 @@ import {
   addDebrisBurst, addAttackSpark, addEggSplat,
 } from './systems/particles.js';
 import { createBubbles, tickBubbles, say } from './systems/bubbles.js';
+import { createCutscene, tickCutscene, endCutscene } from './systems/cutscene.js';
+import { loadSave, saveSave, recordRun } from './systems/save.js';
 import { input } from './input.js';
 
 // --- canvas + context ---
@@ -40,8 +46,24 @@ bakeAll();
 function canonInventory() {
   return { net: 3, banana: 2, cage: 1 };
 }
+function canonInventoryTotal() {
+  const inv = canonInventory();
+  return inv.net + inv.banana + inv.cage;
+}
 function buildTownies() {
   return createFarmTownies().map((t) => createTownie(t.col, t.row, t.variant));
+}
+function freshStats() {
+  return {
+    elapsedTicks: 0,
+    trapsPlaced:  0,
+    eggsDodged:   0,
+    eggsHit:      0,
+    catsTossed:   0,
+    burgersChump: 0,
+    tacosPlayer:  0,
+    tacosChump:   0,
+  };
 }
 function manhattan(a, b) {
   return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
@@ -50,7 +72,7 @@ function manhattan(a, b) {
 // --- game state ---
 const level = createFarm();
 const game = {
-  state: 'PLAN',
+  state: QUICKSTART ? 'PLAN' : 'MENU',
   tick: 0,
   rng: createRng(42),
   level,
@@ -74,13 +96,18 @@ const game = {
   hoverCol: -1,
   hoverRow: -1,
   gotchaTicks: 0,
+  stats: freshStats(),
+  result: null,        // 'won' | 'lost' — set when transitioning to ESCAPE_CUTSCENE / SCORE
+  resultStats: null,   // snapshot saved for SCORE screen
+  cutscene: null,
+  save: loadSave(),
+  worldNum: 1,
 };
 
-function resetLevel() {
+function resetLevelFresh() {
   const freshLevel = createFarm();
   game.level = freshLevel;
   game.buildings = createFarmBuildings();
-  game.state = 'PLAN';
   game.planTimer = 200;
   game.chaseTimer = 600;
   game.catches = 0;
@@ -97,6 +124,47 @@ function resetLevel() {
   game.particles = createParticles(freshLevel);
   game.bubbles = createBubbles();
   game.gotchaTicks = 0;
+  game.stats = freshStats();
+  game.result = null;
+  game.resultStats = null;
+  game.cutscene = null;
+}
+
+function startLevelFromMenu() {
+  resetLevelFresh();
+  game.state = 'PLAN';
+}
+
+function snapshotStats() {
+  return {
+    catches:        game.catches,
+    catchesNeeded:  game.catchesNeeded,
+    buildingsTotal: game.buildings.length,
+    buildingsSaved: game.buildings.filter((b) => b.hp > 0).length,
+    elapsedTicks:   game.stats.elapsedTicks,
+    trapsPlaced:    game.stats.trapsPlaced,
+    eggsDodged:     game.stats.eggsDodged,
+    eggsHit:        game.stats.eggsHit,
+    catsTossed:     game.stats.catsTossed,
+    burgersChump:   game.stats.burgersChump,
+    tacosPlayer:    game.stats.tacosPlayer,
+    tacosChump:     game.stats.tacosChump,
+  };
+}
+
+function enterEscapeCutscene() {
+  game.result = 'won';
+  game.resultStats = snapshotStats();
+  game.cutscene = createCutscene('FARM_ESCAPE');
+  game.state = 'ESCAPE_CUTSCENE';
+}
+
+function enterScore(result) {
+  game.result = result;
+  if (!game.resultStats) game.resultStats = snapshotStats();
+  game.state = 'SCORE';
+  game.save = recordRun(game.save, game.worldNum, result, game.resultStats);
+  saveSave(game.save);
 }
 
 // --- hooks for chicken AI ---
@@ -151,13 +219,11 @@ canvas.addEventListener('mouseleave', () => {
   game.hoverRow = -1;
 });
 canvas.addEventListener('click', (e) => {
-  if (game.state === 'VICTORY' || game.state === 'GAMEOVER') {
-    resetLevel();
-    return;
+  if (game.state === 'PLAN') {
+    const { col, row } = canvasToGrid(e);
+    tryPlaceTrap(col, row);
   }
-  if (game.state !== 'PLAN') return;
-  const { col, row } = canvasToGrid(e);
-  tryPlaceTrap(col, row);
+  // all other states respond to keyboard, not click, now
 });
 
 function tryPlaceTrap(col, row) {
@@ -168,6 +234,7 @@ function tryPlaceTrap(col, row) {
   if (game.inventory[key] <= 0) return;
   game.inventory[key] -= 1;
   game.traps.push(createTrap(key, col, row));
+  game.stats.trapsPlaced += 1;
 }
 
 function respawnChumpFarFromPlayer() {
@@ -192,10 +259,11 @@ function respawnChumpFarFromPlayer() {
 // --- pickup collection ---
 function collectForPlayer(g, p) {
   if (!p || p.state !== 'idle') return;
-  if (p.type === PICKUP_TYPES.CAT) return; // cats are Chump's thing
+  if (p.type === PICKUP_TYPES.CAT) return;
   if (p.type === PICKUP_TYPES.TACO) {
     p.state = 'gone';
     g.player.tacoBuff = 80;
+    g.stats.tacosPlayer += 1;
     say(g.bubbles, g.player, 'TACOS!', 'player_pickup', 20, 20);
     return;
   }
@@ -210,7 +278,6 @@ function collectForPlayer(g, p) {
 function collectForChump(g, p) {
   if (!p || p.state !== 'idle') return;
   if (p.type === PICKUP_TYPES.CAT) {
-    // TOSS — "grab that pussycat"
     p.state = 'tossed';
     p.tossT = 0;
     p.tossFromCol = p.col;
@@ -218,22 +285,24 @@ function collectForChump(g, p) {
     p.tossToCol = Math.max(1, Math.min(g.level.w - 2, p.col + g.rng.int(-3, 3)));
     p.tossToRow = Math.max(1, Math.min(g.level.h - 2, p.row + g.rng.int(-3, 3)));
     g.chump.attackAnim = 8;
+    g.stats.catsTossed += 1;
     say(g.bubbles, g.chump, g.rng.pick(CAT_BUBBLES), 'cat', 30, 26);
     return;
   }
   if (p.type === PICKUP_TYPES.TACO) {
-    // self-stun + rage spike
     p.state = 'gone';
     g.chump.stunTicks = 10;
     addRage(g.chump, 30);
     addEggSplat(g.particles, p.col, p.row, g.rng);
     g.shake = Math.max(g.shake, 10);
+    g.stats.tacosChump += 1;
     say(g.bubbles, g.chump, g.rng.pick(TACO_HATE_BUBBLES), 'taco_hate', 15, 30);
     return;
   }
   if (p.type === PICKUP_TYPES.BURGER) {
     p.state = 'gone';
     g.chump.burgerBuff = 80;
+    g.stats.burgersChump += 1;
     say(g.bubbles, g.chump, g.rng.pick(BURGER_BUBBLES), 'burger', 30, 25);
     return;
   }
@@ -260,7 +329,6 @@ function spawnPickup(g, type) {
     }
     return;
   }
-  // burger / cat: random walkable grass/dirt/rubble tile, at least 3 from player
   for (let attempt = 0; attempt < 30; attempt++) {
     const c = g.rng.int(1, g.level.w - 2);
     const r = g.rng.int(1, g.level.h - 2);
@@ -308,9 +376,11 @@ function tickProjectiles(g) {
       g.shake = Math.max(g.shake, 14);
       addRage(g.chump, 5);
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
+      g.stats.eggsHit += 1;
       say(g.bubbles, g.chump, 'DIRECT HIT', 'egg_hit', 20, 22);
     } else {
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
+      g.stats.eggsDodged += 1;
     }
     g.projectiles.splice(i, 1);
   }
@@ -320,11 +390,14 @@ function tickProjectiles(g) {
 function tick(g) {
   g.tick += 1;
 
-  if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
-  if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
-  if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
-
-  if (g.state === 'PLAN') {
+  if (g.state === 'MENU') {
+    if (input.wasPressed('Enter')) {
+      startLevelFromMenu();
+    }
+  } else if (g.state === 'PLAN') {
+    if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
+    if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
+    if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
     g.planTimer -= 1;
     if (input.wasPressed('Enter') || g.planTimer <= 0) {
       g.state = 'CHASE';
@@ -332,10 +405,15 @@ function tick(g) {
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
   } else if (g.state === 'CHASE') {
+    if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
+    if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
+    if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
+
     g.chaseTimer -= 1;
+    g.stats.elapsedTicks += 1;
 
     tickPlayer(g.player, g.level);
-    // player-side pickup collection after move
+
     const pAt = pickupAt(g.pickups, g.player.col, g.player.row);
     if (pAt) collectForPlayer(g, pAt);
 
@@ -369,14 +447,14 @@ function tick(g) {
       g.gotchaTicks = 15;
     }
 
-    if (g.chaseTimer <= 0) {
-      g.state = 'GAMEOVER';
+    if (g.chaseTimer <= 0 && g.state === 'CHASE') {
       say(g.bubbles, g.chump, 'HAHAHA LOSER', 'taunt', 1, 60);
+      enterScore('lost');
     }
 
-    if (allBuildingsDestroyed(g.buildings)) {
-      g.state = 'GAMEOVER';
+    if (allBuildingsDestroyed(g.buildings) && g.state === 'CHASE') {
       say(g.bubbles, g.chump, 'TOTAL DESTRUCTION', 'destroy', 1, 60);
+      enterScore('lost');
     }
   } else if (g.state === 'GOTCHA') {
     g.gotchaTicks -= 1;
@@ -385,15 +463,47 @@ function tick(g) {
     if (g.shake > 0) g.shake -= 1;
     if (g.gotchaTicks <= 0) {
       if (g.catches >= g.catchesNeeded) {
-        g.state = 'VICTORY';
+        enterEscapeCutscene();
       } else {
         respawnChumpFarFromPlayer();
         g.state = 'CHASE';
       }
     }
+  } else if (g.state === 'ESCAPE_CUTSCENE') {
+    const skipping = input.wasPressed('Space') || input.wasPressed('Enter');
+    const done = tickCutscene(g.cutscene);
+    if (skipping) {
+      endCutscene(g.cutscene);
+      enterScore('won');
+    } else if (done) {
+      enterScore('won');
+    }
+    tickBubbles(g.bubbles);
+  } else if (g.state === 'SCORE') {
+    if (input.wasPressed('Enter')) {
+      game.state = 'MENU';
+    }
   }
 
   input.endFrame();
+}
+
+// --- top-level render routing ---
+function renderFrame(alpha) {
+  if (game.state === 'MENU') {
+    drawMenu(ctx, game, game.save);
+    return;
+  }
+  if (game.state === 'ESCAPE_CUTSCENE') {
+    drawCutscene(ctx, game.cutscene, alpha);
+    return;
+  }
+  if (game.state === 'SCORE') {
+    render(ctx, game, alpha);
+    drawScore(ctx, game);
+    return;
+  }
+  render(ctx, game, alpha);
 }
 
 let accumulator = 0;
@@ -408,7 +518,7 @@ function frame(now) {
     accumulator -= TICK_MS;
   }
 
-  render(ctx, game, accumulator / TICK_MS);
+  renderFrame(accumulator / TICK_MS);
 
   if (DEBUG) {
     ctx.fillStyle = '#fff';
@@ -416,26 +526,28 @@ function frame(now) {
     ctx.textAlign = 'left';
     ctx.fillText(TITLE, 4, 44);
     ctx.fillText('tick ' + game.tick + '  state ' + game.state, 4, 56);
-    ctx.fillText(
-      'player ' + game.player.col + ',' + game.player.row +
-      '  chump ' + game.chump.col + ',' + game.chump.row,
-      4, 68,
-    );
-    ctx.fillText(
-      'rage ' + game.chump.rage +
-      '  final ' + game.chump.finalForm +
-      '  burger ' + game.chump.burgerBuff +
-      '  tacoBuff ' + game.player.tacoBuff,
-      4, 80,
-    );
-    const alive = game.buildings.filter((b) => b.hp > 0).length;
-    ctx.fillText(
-      'bldg ' + alive + '/' + game.buildings.length +
-      '  pickups ' + game.pickups.length +
-      '  eggs ' + game.projectiles.length +
-      '  townies ' + game.townies.length,
-      4, 92,
-    );
+    if (game.state === 'CHASE' || game.state === 'GOTCHA' || game.state === 'PLAN') {
+      ctx.fillText(
+        'player ' + game.player.col + ',' + game.player.row +
+        '  chump ' + game.chump.col + ',' + game.chump.row,
+        4, 68,
+      );
+      ctx.fillText(
+        'rage ' + game.chump.rage +
+        '  final ' + game.chump.finalForm +
+        '  burger ' + game.chump.burgerBuff +
+        '  tacoBuff ' + game.player.tacoBuff,
+        4, 80,
+      );
+      const alive = game.buildings.filter((b) => b.hp > 0).length;
+      ctx.fillText(
+        'bldg ' + alive + '/' + game.buildings.length +
+        '  pickups ' + game.pickups.length +
+        '  eggs ' + game.projectiles.length +
+        '  townies ' + game.townies.length,
+        4, 92,
+      );
+    }
   }
 
   requestAnimationFrame(frame);

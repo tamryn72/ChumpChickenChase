@@ -14,5 +14,11 @@ export const CANVAS_H = TILE * GRID_H; // 480
 export const TICK_HZ = 10;
 export const TICK_MS = 1000 / TICK_HZ;
 
-// Debug flag (pulled from ?debug=1)
-export const DEBUG = new URLSearchParams(window.location.search).has('debug');
+// URL flags — both guarded so node-based tooling (smoke tests) can import config.
+function hasFlag(name) {
+  if (typeof window === 'undefined' || !window.location) return false;
+  return new URLSearchParams(window.location.search).has(name);
+}
+
+export const DEBUG = hasFlag('debug');
+export const QUICKSTART = hasFlag('quickstart'); // skip MENU, boot straight to PLAN
