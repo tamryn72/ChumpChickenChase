@@ -7,6 +7,8 @@ const DEFAULT_SAVE = {
   worldsUnlocked: 1,
   bestStats: {},   // keyed by world number: snapshot of best run
   totalPlays: 0,
+  gameComplete: false,  // set true once W5 is cleared
+  clears: 0,            // how many times W5 has been beaten
 };
 
 function canUseStorage() {
@@ -48,6 +50,10 @@ export function recordRun(save, worldNum, result, stats) {
     const existing = save.bestStats[worldNum];
     if (!existing || scoreRun(stats) > scoreRun(existing)) {
       save.bestStats[worldNum] = { ...stats };
+    }
+    if (worldNum >= 5) {
+      save.gameComplete = true;
+      save.clears = (save.clears || 0) + 1;
     }
   }
   return save;

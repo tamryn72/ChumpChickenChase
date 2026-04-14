@@ -14,6 +14,7 @@ Things that landed firmly — not locked forever, but these are our real directi
 - **Chaos vibe**: real chaos, not just a 1-on-1 chase. Townsperson NPCs running and screaming, buildings on fire, debris flying, particles everywhere. The world should feel like it's falling apart wherever Chump goes.
 - **Grid**: 20×15 tiles × 32px = 640×480 logical canvas. Current working size.
 - **Entry point scaffolded**: `index.html` + `src/{config,rng,main}.js` render the title screen and tick counter. Verified boot-ready.
+- **All 5 worlds shipped**. M12 closed out The Volcano: all four cheats active (dodge/teleport/swim/clone, with SWIM now covering lava too), falling rocks from the peak, flaming eggs, `VOLCANO_VICTORY` cutscene, and a final **GAME COMPLETE** score screen with R-to-replay. `save.gameComplete` flag exists now.
 
 ## New mechanic: Tacos & the Mexican food truck
 

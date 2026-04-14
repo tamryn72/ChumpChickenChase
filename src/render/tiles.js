@@ -1109,3 +1109,334 @@ export function drawCatapult(ctx) {
   ctx.fillRect(8, 29, 1, 1);
   ctx.fillRect(23, 29, 1, 1);
 }
+
+// ---------------------------------------------------------------------------
+// W5 Volcano tiles
+// ---------------------------------------------------------------------------
+
+// Ash ground — dark charcoal with scattered embers and soot flecks.
+export function drawAsh(ctx) {
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // ash streaks
+  ctx.fillStyle = '#2a2018';
+  const streaks = [[2, 4], [10, 7], [18, 3], [24, 14], [6, 22], [14, 26], [22, 20], [28, 9]];
+  for (const [x, y] of streaks) {
+    ctx.fillRect(x, y, 4, 1);
+    ctx.fillRect(x + 1, y + 1, 3, 1);
+  }
+  // embers
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(5, 18, 1, 1);
+  ctx.fillRect(19, 11, 1, 1);
+  ctx.fillRect(26, 25, 1, 1);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(19, 11, 1, 0.5);
+  // subtle grid border
+  ctx.fillStyle = '#0c0806';
+  ctx.fillRect(0, 0, TILE, 1);
+  ctx.fillRect(0, TILE - 1, TILE, 1);
+}
+
+// Obsidian — polished black stone path with blue/purple highlights.
+export function drawObsidian(ctx) {
+  ctx.fillStyle = '#0a0612';
+  ctx.fillRect(0, 0, TILE, TILE);
+  ctx.fillStyle = '#1a0e24';
+  ctx.fillRect(2, 2, TILE - 4, TILE - 4);
+  // reflective highlights
+  ctx.fillStyle = P.lavender;
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(6, 5, 6, 1);
+  ctx.fillRect(18, 9, 8, 1);
+  ctx.fillRect(4, 18, 10, 1);
+  ctx.fillRect(20, 22, 6, 1);
+  ctx.globalAlpha = 1;
+  // fracture lines
+  ctx.fillStyle = '#2a1638';
+  ctx.fillRect(14, 6, 1, 18);
+  ctx.fillRect(8, 14, 14, 1);
+}
+
+// Lava — bright orange pool with brighter yellow veins. Solid for player.
+export function drawLava(ctx) {
+  ctx.fillStyle = '#c43100';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // heat veins
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(0, 4, TILE, 3);
+  ctx.fillRect(0, 14, TILE, 3);
+  ctx.fillRect(0, 24, TILE, 3);
+  // bright yellow hot spots
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(4, 5, 6, 1);
+  ctx.fillRect(16, 5, 4, 1);
+  ctx.fillRect(10, 15, 8, 1);
+  ctx.fillRect(22, 15, 4, 1);
+  ctx.fillRect(6, 25, 10, 1);
+  // cooled-crust darker patches floating in it
+  ctx.fillStyle = '#5a1500';
+  ctx.fillRect(2, 10, 4, 2);
+  ctx.fillRect(22, 20, 5, 2);
+  ctx.fillRect(14, 2, 3, 1);
+}
+
+// Magma rock — solid dark charcoal wall with glowing cracks.
+export function drawMagmaRock(ctx) {
+  ctx.fillStyle = '#2a1a10';
+  ctx.fillRect(0, 0, TILE, TILE);
+  ctx.fillStyle = '#3a241a';
+  ctx.fillRect(0, 0, TILE, 2);
+  ctx.fillRect(0, TILE - 2, TILE, 2);
+  // cracks with lava glow inside
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(4, 8, 10, 1);
+  ctx.fillRect(14, 9, 1, 4);
+  ctx.fillRect(20, 18, 8, 1);
+  ctx.fillRect(6, 22, 1, 6);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(8, 8, 2, 1);
+  ctx.fillRect(22, 18, 2, 1);
+  // chunky outline
+  ctx.fillStyle = '#0a0605';
+  ctx.fillRect(0, 0, 1, TILE);
+  ctx.fillRect(TILE - 1, 0, 1, TILE);
+}
+
+// Volcano peak — smoking cone silhouette.
+export function drawVolcanoPeak(ctx) {
+  // sky backdrop
+  ctx.fillStyle = '#251408';
+  ctx.fillRect(0, 0, TILE, TILE);
+  // mountain slope
+  ctx.fillStyle = '#2a1a10';
+  ctx.fillRect(0, 14, TILE, 18);
+  // jagged top
+  ctx.fillStyle = '#2a1a10';
+  ctx.beginPath();
+  ctx.moveTo(0, 16);
+  ctx.lineTo(6, 6);
+  ctx.lineTo(12, 10);
+  ctx.lineTo(18, 4);
+  ctx.lineTo(24, 8);
+  ctx.lineTo(TILE, 14);
+  ctx.lineTo(TILE, TILE);
+  ctx.lineTo(0, TILE);
+  ctx.closePath();
+  ctx.fill();
+  // lava glow at the crater
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(14, 6, 4, 2);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(15, 6, 2, 1);
+  // smoke puffs
+  ctx.fillStyle = P.lightGrey;
+  ctx.globalAlpha = 0.7;
+  ctx.fillRect(14, 2, 4, 2);
+  ctx.fillRect(18, 1, 3, 2);
+  ctx.fillRect(12, 0, 2, 2);
+  ctx.globalAlpha = 1;
+}
+
+// Stone hut — small villager shelter with thatched roof and glowing door.
+export function drawStoneHut(ctx) {
+  drawAsh(ctx);
+  // hut body
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(3, 12, 26, 18);
+  ctx.fillStyle = '#3a342c';
+  ctx.fillRect(3, 12, 26, 2);
+  // stones
+  ctx.fillStyle = '#2a241c';
+  ctx.fillRect(5, 16, 4, 2);
+  ctx.fillRect(12, 16, 5, 2);
+  ctx.fillRect(20, 16, 4, 2);
+  ctx.fillRect(8, 20, 5, 2);
+  ctx.fillRect(15, 20, 4, 2);
+  ctx.fillRect(22, 20, 4, 2);
+  // thatched roof
+  ctx.fillStyle = '#6b4000';
+  ctx.fillRect(1, 4, 30, 10);
+  ctx.fillStyle = '#4a2b00';
+  for (let x = 1; x < 31; x += 3) {
+    ctx.fillRect(x, 6, 1, 7);
+  }
+  // glowing door
+  ctx.fillStyle = P.black;
+  ctx.fillRect(13, 20, 6, 10);
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(14, 22, 4, 1);
+  ctx.fillRect(14, 26, 4, 1);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(15, 22, 2, 1);
+}
+
+// Shrine — offering altar with floating ember/skull offering.
+export function drawShrine(ctx) {
+  drawAsh(ctx);
+  // pedestal
+  ctx.fillStyle = '#4a4238';
+  ctx.fillRect(6, 18, 20, 12);
+  ctx.fillStyle = '#2a241c';
+  ctx.fillRect(6, 18, 20, 1);
+  ctx.fillRect(6, 29, 20, 1);
+  // stepped tiers
+  ctx.fillStyle = '#3a342c';
+  ctx.fillRect(4, 22, 2, 8);
+  ctx.fillRect(26, 22, 2, 8);
+  // bowl on top
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(10, 12, 12, 6);
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(11, 13, 10, 3);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(13, 13, 2, 1);
+  ctx.fillRect(17, 14, 3, 1);
+  // flame tongue
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(14, 8, 4, 4);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(15, 9, 2, 2);
+  // carvings
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(10, 22, 1, 4);
+  ctx.fillRect(21, 22, 1, 4);
+  ctx.fillRect(15, 24, 2, 2);
+}
+
+// Cauldron — round bubbling lava pot over a small fire.
+export function drawCauldron(ctx) {
+  drawAsh(ctx);
+  // legs
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(6, 24, 3, 6);
+  ctx.fillRect(23, 24, 3, 6);
+  ctx.fillRect(14, 26, 4, 4);
+  // fire under
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(10, 26, 12, 4);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(12, 27, 8, 2);
+  // pot body
+  ctx.fillStyle = '#1a0e08';
+  ctx.fillRect(4, 12, 24, 14);
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(4, 12, 24, 2);
+  // lava inside
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(5, 11, 22, 3);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(9, 11, 3, 1);
+  ctx.fillRect(18, 11, 4, 1);
+  // bubble
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(14, 7, 3, 3);
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(15, 8, 1, 1);
+}
+
+// Crystal cluster — jagged glowing purple/blue shards.
+export function drawCrystal(ctx) {
+  drawObsidian(ctx);
+  // shard bases
+  ctx.fillStyle = P.darkPurple;
+  ctx.fillRect(6, 18, 20, 12);
+  // shard 1 tall
+  ctx.fillStyle = P.lavender;
+  ctx.beginPath();
+  ctx.moveTo(10, 22);
+  ctx.lineTo(13, 4);
+  ctx.lineTo(16, 22);
+  ctx.closePath();
+  ctx.fill();
+  // shard 2 medium
+  ctx.fillStyle = P.blue;
+  ctx.beginPath();
+  ctx.moveTo(16, 24);
+  ctx.lineTo(20, 10);
+  ctx.lineTo(24, 24);
+  ctx.closePath();
+  ctx.fill();
+  // shard 3 small
+  ctx.fillStyle = P.pink;
+  ctx.beginPath();
+  ctx.moveTo(4, 26);
+  ctx.lineTo(7, 16);
+  ctx.lineTo(10, 26);
+  ctx.closePath();
+  ctx.fill();
+  // highlights
+  ctx.fillStyle = P.white;
+  ctx.fillRect(12, 10, 1, 6);
+  ctx.fillRect(19, 14, 1, 4);
+  ctx.fillRect(6, 19, 1, 4);
+}
+
+// Lookout tower — stone pillar with a torch on top.
+export function drawLookout(ctx) {
+  drawObsidian(ctx);
+  // stone shaft
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(8, 4, 16, 26);
+  ctx.fillStyle = '#3a342c';
+  ctx.fillRect(8, 4, 16, 2);
+  ctx.fillRect(8, 14, 16, 2);
+  // window
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(13, 9, 6, 4);
+  ctx.fillStyle = P.black;
+  ctx.fillRect(15, 9, 2, 4);
+  // crenellations
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(6, 2, 4, 4);
+  ctx.fillRect(12, 2, 3, 4);
+  ctx.fillRect(17, 2, 3, 4);
+  ctx.fillRect(22, 2, 4, 4);
+  // torch
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(14, 0, 4, 3);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(15, 1, 2, 1);
+  // door at base
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(13, 22, 6, 8);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(17, 26, 1, 1);
+}
+
+// Magma forge — anvil + furnace glowing orange.
+export function drawForge(ctx) {
+  drawAsh(ctx);
+  // furnace hood
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(2, 2, 16, 18);
+  ctx.fillStyle = '#2a241c';
+  ctx.fillRect(2, 2, 16, 2);
+  // fire mouth
+  ctx.fillStyle = P.black;
+  ctx.fillRect(4, 10, 12, 10);
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(5, 12, 10, 8);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(7, 14, 6, 4);
+  // chimney
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(8, 0, 4, 4);
+  ctx.fillStyle = P.lightGrey;
+  ctx.globalAlpha = 0.6;
+  ctx.fillRect(7, 0, 2, 2);
+  ctx.globalAlpha = 1;
+  // anvil to the right
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(20, 18, 10, 6);
+  ctx.fillRect(22, 24, 6, 6);
+  // anvil horn
+  ctx.fillStyle = '#0a0806';
+  ctx.fillRect(28, 16, 3, 3);
+  // hammer leaning
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(25, 10, 1, 8);
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(22, 8, 6, 3);
+}
+

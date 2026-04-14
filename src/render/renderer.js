@@ -61,6 +61,18 @@ const TILE_KEY = {
   [T.INN]:            'tile_inn',
   [T.VILLAGE_HOUSE]:  'tile_village_house',
   [T.CATAPULT]:       'tile_catapult',
+  // W5 Volcano
+  [T.ASH]:            'tile_ash',
+  [T.OBSIDIAN]:       'tile_obsidian',
+  [T.LAVA]:            'tile_lava',
+  [T.MAGMA_ROCK]:     'tile_magma_rock',
+  [T.VOLCANO_PEAK]:   'tile_volcano_peak',
+  [T.STONE_HUT]:      'tile_stone_hut',
+  [T.SHRINE]:         'tile_shrine',
+  [T.CAULDRON]:       'tile_cauldron',
+  [T.CRYSTAL]:        'tile_crystal',
+  [T.LOOKOUT]:        'tile_lookout',
+  [T.FORGE]:          'tile_forge',
 };
 
 const PLAYER_KEYS = {
@@ -232,6 +244,42 @@ function drawChumpRageBar(ctx, c, alpha) {
 function drawProjectiles(ctx, projectiles, alpha) {
   for (const p of projectiles) {
     const pos = projectilePixelPos(p, alpha);
+
+    if (p.kind === 'rock') {
+      // Warning reticle growing on the target tile as the rock drops.
+      const frac = Math.min(1, (p.t + alpha) / p.totalTicks);
+      const tx = p.targetCol * TILE + TILE / 2;
+      const ty = p.targetRow * TILE + TILE / 2;
+      // shadow grows from small to full
+      const r = 4 + frac * 12;
+      ctx.globalAlpha = 0.45 + frac * 0.35;
+      ctx.fillStyle = P.red;
+      ctx.beginPath();
+      ctx.arc(tx, ty, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.65;
+      ctx.strokeStyle = P.chumpOrange;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(tx, ty, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 1;
+      // actual falling rock sprite — dark grey chunk with an ember edge
+      const rx = (pos.x | 0) - 6;
+      const ry = (pos.y | 0) - 6;
+      ctx.fillStyle = '#2a241c';
+      ctx.fillRect(rx, ry, 12, 12);
+      ctx.fillStyle = P.darkGrey;
+      ctx.fillRect(rx + 2, ry + 2, 8, 8);
+      ctx.fillStyle = P.chumpOrange;
+      ctx.fillRect(rx, ry, 2, 2);
+      ctx.fillRect(rx + 10, ry + 8, 2, 2);
+      ctx.fillStyle = P.yellow;
+      ctx.fillRect(rx + 1, ry + 1, 1, 1);
+      continue;
+    }
+
     const groundFrac = Math.min(1, (p.t + alpha) / p.totalTicks);
     const groundX = ((p.fromCol + (p.targetCol - p.fromCol) * groundFrac)) * TILE + TILE / 2;
     const groundY = ((p.fromRow + (p.targetRow - p.fromRow) * groundFrac)) * TILE + TILE / 2 + 4;
@@ -239,6 +287,22 @@ function drawProjectiles(ctx, projectiles, alpha) {
     ctx.beginPath();
     ctx.ellipse(groundX, groundY, 4, 1.5, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    if (p.kind === 'egg_fiery') {
+      // orange/yellow flame halo under the egg
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = P.chumpOrange;
+      ctx.beginPath();
+      ctx.arc((pos.x | 0), (pos.y | 0), 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = P.yellow;
+      ctx.beginPath();
+      ctx.arc((pos.x | 0), (pos.y | 0), 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
     cache.draw(ctx, 'egg', (pos.x | 0) - 4, (pos.y | 0) - 4);
   }
 }

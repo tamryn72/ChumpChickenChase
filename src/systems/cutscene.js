@@ -42,6 +42,19 @@ export const CUTSCENE_SCRIPTS = {
       { at: 150, ttl: 40, text: 'volcano time folks' },
     ],
   },
+  // Final world — Chump does NOT escape. The farmer finally bags him on the
+  // lip of the caldera. Last lines fade out as the crater erupts in confetti.
+  VOLCANO_VICTORY: {
+    totalTicks: 240,
+    captions: [
+      { at: 0,   ttl: 36, text: 'cornered on the caldera' },
+      { at: 40,  ttl: 36, text: 'I am being unfairly caught' },
+      { at: 80,  ttl: 36, text: 'this chicken is going home' },
+      { at: 120, ttl: 36, text: 'TOWN SAVED' },
+      { at: 160, ttl: 36, text: 'orange chicken delivered' },
+      { at: 200, ttl: 40, text: 'credits: one very good farmer' },
+    ],
+  },
 };
 
 export function createCutscene(scriptName) {

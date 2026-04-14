@@ -72,6 +72,10 @@ export function drawCutscene(ctx, cs, alpha) {
     drawMarketStyleEscape(ctx, cs, alpha);
     return;
   }
+  if (cs.script === 'VOLCANO_VICTORY') {
+    drawVolcanoVictory(ctx, cs, alpha);
+    return;
+  }
   drawFarmStyleEscape(ctx, cs, alpha);
 }
 
@@ -370,6 +374,184 @@ function drawMarketStyleEscape(ctx, cs, alpha) {
   }
 
   // skip hint
+  ctx.fillStyle = '#888';
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('SPACE to skip', CANVAS_W - 6, CANVAS_H - 6);
+}
+
+// ---------------------------------------------------------------------------
+// Volcano VICTORY — chump finally gets caught on the caldera. No escape.
+// The player's pixel sprite walks in, lunges, hoists chump overhead while
+// the crater erupts in confetti.
+// ---------------------------------------------------------------------------
+
+function drawVolcanoBackground(ctx, t) {
+  ctx.fillStyle = '#0c0308';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H / 2);
+  ctx.fillStyle = '#2a0a05';
+  ctx.fillRect(0, CANVAS_H / 2 - 30, CANVAS_W, 60);
+  ctx.fillStyle = '#1a0a05';
+  ctx.beginPath();
+  ctx.moveTo(0, CANVAS_H);
+  ctx.lineTo(0, CANVAS_H - 60);
+  ctx.lineTo(120, CANVAS_H - 180);
+  ctx.lineTo(240, CANVAS_H - 110);
+  ctx.lineTo(320, CANVAS_H - 190);
+  ctx.lineTo(420, CANVAS_H - 110);
+  ctx.lineTo(540, CANVAS_H - 160);
+  ctx.lineTo(CANVAS_W, CANVAS_H - 70);
+  ctx.lineTo(CANVAS_W, CANVAS_H);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = P.chumpOrange;
+  ctx.globalAlpha = 0.55 + Math.sin(t * 0.25) * 0.1;
+  ctx.beginPath();
+  ctx.arc(320, CANVAS_H - 188, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(314, CANVAS_H - 192, 12, 4);
+  ctx.fillStyle = P.chumpOrange;
+  for (let i = 0; i < 8; i++) {
+    const x = 280 + ((i * 17 + t) % 80);
+    const y = CANVAS_H - 200 + ((i * 11 + t * 2) % 40);
+    ctx.fillRect(x, y, 1, 1);
+  }
+  ctx.fillStyle = P.white;
+  const stars = [[40, 30], [110, 55], [220, 20], [380, 40], [520, 60], [590, 30]];
+  for (const [sx, sy] of stars) {
+    if ((Math.floor(t / 10) + sx) % 3 !== 0) ctx.fillRect(sx, sy, 1, 1);
+  }
+}
+
+function drawPlayerTransformed(ctx, cx, cy, facingIdx, frame, scale) {
+  const faceName = FACE_NAME[facingIdx];
+  const key = `player_${faceName}_${frame}`;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  cache.draw(ctx, key, -8, -8);
+  ctx.restore();
+}
+
+function drawConfetti(ctx, t) {
+  const colors = [P.chumpOrange, P.yellow, P.pink, P.green, P.blue, P.white];
+  for (let i = 0; i < 40; i++) {
+    const px = (i * 53) % CANVAS_W;
+    const drop = ((i * 37 + t * 3) % (CANVAS_H + 80));
+    const sway = Math.sin((i + t * 0.1) * 0.4) * 14;
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillRect((px + sway) | 0, drop | 0, 3, 3);
+  }
+}
+
+function drawVolcanoVictory(ctx, cs, alpha) {
+  const t = cs.t + alpha;
+  drawVolcanoBackground(ctx, t);
+
+  const centerX = CANVAS_W / 2;
+  const groundY = CANVAS_H - 200;
+
+  let chumpX, chumpY, chumpRot, chumpScale, chumpFacing, chumpFrame;
+  let playerX, playerY, playerFacing, playerFrame, playerScale;
+  let showConfetti = false;
+  let ropeLine = false;
+
+  if (t < 40) {
+    chumpX = centerX + 30;
+    chumpY = groundY;
+    chumpRot = Math.sin(t * 0.4) * 0.08;
+    chumpScale = 3;
+    chumpFacing = 3;
+    chumpFrame = Math.floor(t / 4) % 2;
+    playerX = centerX - 140 + (t / 40) * 80;
+    playerY = groundY + 8;
+    playerFacing = 1;
+    playerFrame = Math.floor(t / 3) % 2;
+    playerScale = 3;
+  } else if (t < 80) {
+    const p = (t - 40) / 40;
+    chumpX = centerX + 30 - p * 40;
+    chumpY = groundY - Math.sin(p * Math.PI) * 10;
+    chumpRot = p * 0.5;
+    chumpScale = 3;
+    chumpFacing = 2;
+    chumpFrame = Math.floor(t / 2) % 2;
+    playerX = centerX - 60 + p * 30;
+    playerY = groundY + 8 - Math.sin(p * Math.PI) * 6;
+    playerFacing = 1;
+    playerFrame = Math.floor(t / 2) % 2;
+    playerScale = 3.2;
+  } else if (t < 120) {
+    const p = (t - 80) / 40;
+    chumpX = centerX - 10;
+    chumpY = groundY - 20 - p * 40;
+    chumpRot = Math.PI * 0.6 - p * 0.3;
+    chumpScale = 3;
+    chumpFacing = 0;
+    chumpFrame = 0;
+    playerX = centerX - 34;
+    playerY = groundY + 8;
+    playerFacing = 2;
+    playerFrame = Math.floor(t / 5) % 2;
+    playerScale = 3.2;
+    ropeLine = true;
+  } else if (t < 160) {
+    chumpX = centerX - 10;
+    chumpY = groundY - 60 + Math.sin(t * 0.25) * 3;
+    chumpRot = Math.PI * 0.3 + Math.sin(t * 0.2) * 0.1;
+    chumpScale = 3;
+    chumpFacing = 0;
+    chumpFrame = Math.floor(t / 6) % 2;
+    playerX = centerX - 34;
+    playerY = groundY + 8;
+    playerFacing = 2;
+    playerFrame = Math.floor(t / 5) % 2;
+    playerScale = 3.2;
+    showConfetti = true;
+    ropeLine = true;
+  } else {
+    chumpX = centerX - 10;
+    chumpY = groundY - 66;
+    chumpRot = Math.PI * 0.3 + Math.sin(t * 0.2) * 0.06;
+    chumpScale = 3 + Math.sin(t * 0.2) * 0.06;
+    chumpFacing = 0;
+    chumpFrame = Math.floor(t / 6) % 2;
+    playerX = centerX - 34;
+    playerY = groundY + 8;
+    playerFacing = 2;
+    playerFrame = Math.floor(t / 6) % 2;
+    playerScale = 3.2;
+    showConfetti = true;
+    ropeLine = true;
+  }
+
+  drawPlayerTransformed(ctx, playerX, playerY, playerFacing, playerFrame, playerScale);
+  drawChumpTransformed(ctx, chumpX, chumpY, chumpRot, chumpScale, chumpFacing, chumpFrame);
+
+  if (ropeLine) {
+    ctx.strokeStyle = P.yellow;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(playerX + 6, playerY - 6);
+    ctx.lineTo(chumpX - 2, chumpY + 8);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  if (showConfetti) drawConfetti(ctx, t);
+
+  const caption = cs.captions.find((c) => t >= c.at && t < c.at + c.ttl);
+  if (caption) {
+    const localT = t - caption.at;
+    const fade = localT < 4 ? localT / 4 : (localT > caption.ttl - 4 ? (caption.ttl - localT) / 4 : 1);
+    ctx.globalAlpha = Math.max(0, Math.min(1, fade));
+    drawCaption(ctx, caption.text);
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = '#888';
   ctx.font = '10px ui-monospace, monospace';
   ctx.textAlign = 'right';

@@ -53,6 +53,19 @@ export const TILE_TYPES = {
   INN:          66,
   VILLAGE_HOUSE:67,
   CATAPULT:     68,
+
+  // --- W5 Volcano ---
+  ASH:          80,  // walkable dark ash ground
+  OBSIDIAN:     81,  // walkable polished black stone path
+  LAVA:         82,  // solid for player, passable for chump via SWIM cheat
+  MAGMA_ROCK:   83,  // solid wall, indestructible
+  VOLCANO_PEAK: 84,  // solid, cosmetic smoking peak
+  STONE_HUT:    85,  // building tile — fragile villager hut
+  SHRINE:       86,  // building tile — offering shrine
+  CAULDRON:     87,  // building tile — bubbling lava cauldron
+  CRYSTAL:      88,  // building tile — glowing crystal cluster
+  LOOKOUT:      89,  // building tile — lookout tower base
+  FORGE:        90,  // building tile — magma forge
 };
 
 export const SOLID = new Set([
@@ -99,6 +112,17 @@ export const SOLID = new Set([
   TILE_TYPES.VILLAGE_HOUSE,
   TILE_TYPES.CATAPULT,
   // CASTLE_FLOOR stays walkable
+  // W5 Volcano — lava is solid for player but chump with SWIM can cross it
+  // (handled in chicken.js isStepAcceptable). ASH + OBSIDIAN walkable.
+  TILE_TYPES.LAVA,
+  TILE_TYPES.MAGMA_ROCK,
+  TILE_TYPES.VOLCANO_PEAK,
+  TILE_TYPES.STONE_HUT,
+  TILE_TYPES.SHRINE,
+  TILE_TYPES.CAULDRON,
+  TILE_TYPES.CRYSTAL,
+  TILE_TYPES.LOOKOUT,
+  TILE_TYPES.FORGE,
 ]);
 
 export class Level {

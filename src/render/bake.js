@@ -57,6 +57,19 @@ export function bakeAll() {
   cache.bake('tile_village_house', TILE, TILE, tiles.drawVillageHouse);
   cache.bake('tile_catapult',      TILE, TILE, tiles.drawCatapult);
 
+  // W5 Volcano
+  cache.bake('tile_ash',          TILE, TILE, tiles.drawAsh);
+  cache.bake('tile_obsidian',     TILE, TILE, tiles.drawObsidian);
+  cache.bake('tile_lava',         TILE, TILE, tiles.drawLava);
+  cache.bake('tile_magma_rock',   TILE, TILE, tiles.drawMagmaRock);
+  cache.bake('tile_volcano_peak', TILE, TILE, tiles.drawVolcanoPeak);
+  cache.bake('tile_stone_hut',    TILE, TILE, tiles.drawStoneHut);
+  cache.bake('tile_shrine',       TILE, TILE, tiles.drawShrine);
+  cache.bake('tile_cauldron',     TILE, TILE, tiles.drawCauldron);
+  cache.bake('tile_crystal',      TILE, TILE, tiles.drawCrystal);
+  cache.bake('tile_lookout',      TILE, TILE, tiles.drawLookout);
+  cache.bake('tile_forge',        TILE, TILE, tiles.drawForge);
+
   // --- player (16x16) ---
   cache.bake('player_up_0',    16, 16, sprites.drawPlayerUp0);
   cache.bake('player_up_1',    16, 16, sprites.drawPlayerUp1);
