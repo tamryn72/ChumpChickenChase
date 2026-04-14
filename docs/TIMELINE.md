@@ -2,6 +2,31 @@
 
 > Chronological log of what has shipped. Newest first. Format: `YYYY-MM-DD — [Milestone] — summary`.
 
+## 2026-04-14 — M7 — Taco truck, pickups (cat/burger/taco), townspeople NPCs
+
+- `entities/pickup.js` — cat/burger/taco pickups with idle/tossed/dizzy/gone state machine, 30s self-despawn, parabolic toss arc for cats
+- `entities/npc.js` — Townie entity with wander + panic states (runs away from Chump when within 4 tiles), pure cosmetic
+- `world/level.js` — `TACO_TRUCK_L`, `TACO_TRUCK_R` tile types, both solid
+- `world/farm.js` — taco truck placed at (12,5)-(13,5), `createFarmBuildings` includes `Taco Truck` (6hp), `createFarmTownies` returns 3 npc spawn positions
+- `render/tiles.js` — procedural truck art (green awning, red trim, yellow body, window with TACOS text, door, green sign, wheels)
+- `render/sprites.js` — drawCat (gray tabby), drawBurger (layered), drawTaco (crescent w/ filling), drawTownie0/1/2 idle+panic (3 color variants)
+- `entities/chicken.js` — pickup priority BEFORE destroy: cat (mandatory) → taco (hate) → burger (opportunistic). Burger buff = 3 ticks/tile + 1-hit destroy + halved attack cooldown + orange glow. Taco eat = 10-tick self-stun + 30 rage + screen shake. Added CAT_BUBBLES ("grab that pussycat"), TACO_HATE_BUBBLES, BURGER_BUBBLES
+- `entities/player.js` — `tacoBuff` field (80t speed buff, 1 tick/tile instead of 2, green pulsing glow), `burgerBait` inventory for M10 bridge
+- `render/renderer.js` — draws pickups with dizzy-star wobble, townies in row-sorted entity list, burger buff orange glow on chump, taco buff green aura on player
+- `main.js` — pickup spawn timers (taco 180t, burger 250t, cat 300t), player-side collection after move, chicken-side collection via onReachPickup hook, tacos spawn adjacent to truck, burgers/cats spawn on random grass/dirt/rubble tiles >=3 from player, townies tick each chase frame, respawn carries burger buff through catches
+
+## 2026-04-14 — M6 — Rage meter, egg throwing, player stun, final form
+
+- `entities/projectile.js` — createEgg + tickProjectile + parabolic arc pixel position (12-tick flight)
+- Rage system inside `chicken.js`: passive +1/5s, +10 trap, +5 egg hit, +2 per building attack, cap 100. At 100 → FINAL FORM 50 ticks (5s), then resets to 0.
+- Final form effects: 2x move speed (2 vs 4 ticks/tile), Net+Banana immunity, Cage reduced to 10t stun, 18-shake + bubble on trigger
+- Egg throwing as a side action in tickChump: 40-60 tick cooldown, fires when player within manhattan 2-7, faces player on throw
+- `entities/player.js` — stunTicks field, frozen-no-input state, flashing sprite
+- `systems/particles.js` — new egg_splat kind (yellow/white burst with addEggSplat)
+- `render/sprites.js` — drawEgg (8×8 white oval with yellow highlight)
+- `render/renderer.js` — top-level save/translate for Math.random screen shake (render-only so doesn't touch gameplay determinism), drawChump radial red rage glow when rage > 50 or final form, drawChumpRageBar 24×2 red/white bar above chump, drawProjectiles with elliptical ground shadow for arc readability
+- `main.js` — game.projectiles + game.shake, tickChump now takes a context object {level, rng, hooks, traps, buildings, player}, tickProjectiles handles landings (manhattan 1 of target = hit → 5t player stun + 14 shake + 5 rage + DIRECT HIT bubble), catch respawn carries rage + finalForm + burgerBuff
+
 ## 2026-04-14 — M5 — Buildings with HP, Chump destroys them
 
 - `entities/building.js` — cluster-of-tiles buildings with shared HP, bounding box, nearest-tile helpers, destroy-to-rubble conversion

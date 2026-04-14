@@ -130,6 +130,65 @@ Goal: load Farm tilemap, move player around, see something on a real canvas.
 
 ---
 
+## Future upgrades (user wishlist — not scheduled yet)
+
+Comedy / mechanics parked here, to be wired in once the base game is stable.
+
+### Executive Clucks — "I am hereby signing an order"
+
+Once per level, AFTER being caught, Chump issues a new "executive order" that
+makes him harder to catch for the rest of that level. Each order is named the
+**opposite of its actual effect** because Chump is not a reliable narrator.
+Big ceremonial UI: paper scroll slides onto screen, stamp sound, text reads
+"EXECUTIVE CLUCK — ORDER FOR [NAME]", Chump signs it with his beak.
+
+Pool of possible orders (one is randomly picked after each catch):
+
+- **Order for Speed** — the player now has a 2-second delay before any
+  movement input registers. "For efficiency reasons."
+- **Supersonic Order** — an on-demand slow-mo ability Chump can activate
+  that drops the player's movement to 25% speed for 2 seconds. Chump can
+  pop this whenever he wants.
+- **Red Foxes Directive** — spawns 2-3 **red-eyed, red-hatted fox minions**
+  on the map. They don't directly attack, they just get in the player's
+  way and trip them (short stagger stun on contact).
+- **Icy Executive Cluck** — Chump can now throw **ice cubes** instead of
+  (or alongside) eggs. Ice cubes freeze the player in place for 2 seconds
+  on direct hit. Screen tints pale blue briefly on impact.
+
+Once an order is signed it stays active for the rest of the level, stacking
+with any previous orders from earlier catches. Multiple catches = multiple
+orders. Escalating absurdity.
+
+### Red Fox Minions
+
+Chump can call in his "Red Foxes" as a helper mob (from the directive above,
+or as a standalone summon from his base AI when rage is high).
+
+- Red eyes, red little hats, orange fur, 16×16 sprites
+- 2-frame wander/run anim, not very smart
+- Roam toward the player and stagger them on contact
+- Can be dispatched with a trap or just avoided
+- "It's the Red Foxes, folks. Very red. Very fox."
+
+### Arctic / Ice level
+
+Was going to be the ice-hole kill mechanic but we're deferring that whole
+thing to a future **ice-themed level** (maybe a new world 6, or a variant
+section of the Volcano). The ice hole would be a 1-tile hazard you can bait
+Chump into (or he baits townspeople into). Details TBD.
+
+### Other parked ideas
+
+- **Spit-fire animation** when Chump eats a taco (currently uses a placeholder
+  egg-splat). Proper orange/red flame particle burst + screen flash.
+- **Cook NPC** standing at the taco truck window. Currently the truck is
+  just the building — no visible cook.
+- **Spoken taunt experiment** using `SpeechSynthesis` API. Low-effort test,
+  ship if it's funny, rip out if it's grating.
+
+---
+
 ## Design calls worth talking through
 
 These are real open questions with multiple viable answers. I'll present options and my lean, but the point is for us to decide together.
