@@ -4,16 +4,21 @@ import { CANVAS_W, CANVAS_H, TILE, TICK_MS, DEBUG, TITLE } from './config.js';
 import { createRng } from './rng.js';
 import { bakeAll } from './render/bake.js';
 import { render } from './render/renderer.js';
-import { createFarm } from './world/farm.js';
+import { createFarm, createFarmBuildings } from './world/farm.js';
+import { TILE_TYPES as T } from './world/level.js';
 import { createPlayer, tickPlayer } from './entities/player.js';
 import {
-  createChump, tickChump, TAUNTS, STUN_BUBBLES, ESCAPE_BUBBLES,
+  createChump, tickChump, TAUNTS, STUN_BUBBLES, ESCAPE_BUBBLES, DESTROY_BUBBLES,
 } from './entities/chicken.js';
 import {
   createTrap, TRAP_TYPES, findTrapAt,
 } from './entities/trap.js';
 import {
+  destroyBuilding, allBuildingsDestroyed,
+} from './entities/building.js';
+import {
   createParticles, tickParticles, addGoo, addFeather,
+  addDebrisBurst, addAttackSpark,
 } from './systems/particles.js';
 import { createBubbles, tickBubbles, say } from './systems/bubbles.js';
 import { input } from './input.js';
@@ -28,6 +33,10 @@ ctx.imageSmoothingEnabled = false;
 bakeAll();
 
 // --- game state ---
+function canonInventory() {
+  return { net: 3, banana: 2, cage: 1 };
+}
+
 const level = createFarm();
 const game = {
   state: 'PLAN',
@@ -38,49 +47,65 @@ const game = {
   chump: createChump(14, 5),
   particles: createParticles(level),
   bubbles: createBubbles(),
+  buildings: createFarmBuildings(),
   traps: [],
-  // phase timers (in ticks, 10Hz => 200 = 20s)
   planTimer: 200,
-  chaseTimer: 500,
-  // catch objective
+  chaseTimer: 600,
   catches: 0,
   catchesNeeded: 2,
-  // placement
   selectedTrap: TRAP_TYPES.NET,
-  inventory: { net: 3, banana: 2, cage: 1 },
+  inventory: canonInventory(),
   hoverCol: -1,
   hoverRow: -1,
   gotchaTicks: 0,
 };
 
-function canonInventory() {
-  return { net: 3, banana: 2, cage: 1 };
-}
-
 function resetLevel() {
+  // rebuild the tilemap fresh — destroyed tiles should come back
+  const freshLevel = createFarm();
+  game.level = freshLevel;
+  game.buildings = createFarmBuildings();
   game.state = 'PLAN';
   game.planTimer = 200;
-  game.chaseTimer = 500;
+  game.chaseTimer = 600;
   game.catches = 0;
   game.traps.length = 0;
   game.inventory = canonInventory();
   game.selectedTrap = TRAP_TYPES.NET;
   game.player = createPlayer(10, 7);
   game.chump = createChump(14, 5);
-  game.particles = createParticles(level);
+  game.particles = createParticles(freshLevel);
   game.bubbles = createBubbles();
   game.gotchaTicks = 0;
 }
 
-// --- hooks for chicken AI to fire particles / speech ---
+// --- hooks for chicken AI to fire particles / speech / destruction ---
 const chumpHooks = {
   addGoo:     (col, row)  => addGoo(game.particles, col, row),
   addFeather: (x, y, rng) => addFeather(game.particles, x, y, rng),
-  onTrapped:  (c)         => say(game.bubbles, c, game.rng.pick(STUN_BUBBLES), 'hit', 30, 22),
+  onTrapped:  (c)         => say(game.bubbles, c, game.rng.pick(STUN_BUBBLES),   'hit', 30, 22),
   onEscape:   (c)         => say(game.bubbles, c, game.rng.pick(ESCAPE_BUBBLES), 'escape', 50, 22),
+  onAttack:   (c, building, near) => {
+    addAttackSpark(game.particles, near.col, near.row, game.rng);
+    // occasional taunt
+    if (game.rng.chance(0.3)) {
+      say(game.bubbles, c, game.rng.pick(DESTROY_BUBBLES), 'destroy', 60, 22);
+    }
+  },
+  onDestroy:  (c, building) => {
+    // rubble-ize and spawn a big debris burst at each tile
+    destroyBuilding(building, game.level, T.RUBBLE);
+    for (const [col, row] of building.tiles) {
+      addDebrisBurst(game.particles, col, row, game.rng);
+    }
+    for (const [col, row] of building.extraTiles) {
+      addDebrisBurst(game.particles, col, row, game.rng, 6);
+    }
+    say(game.bubbles, c, 'DEMOLISHED', 'destroy', 20, 30);
+  },
 };
 
-// --- canvas mouse handling (PLAN phase placement + VICTORY/GAMEOVER retry) ---
+// --- canvas mouse handling ---
 function canvasToGrid(e) {
   const rect = canvas.getBoundingClientRect();
   const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -124,11 +149,11 @@ function manhattan(a, b) {
 }
 
 function respawnChumpFarFromPlayer() {
-  const { level } = game;
+  const { level: L } = game;
   for (let attempt = 0; attempt < 60; attempt++) {
-    const c = game.rng.int(1, level.w - 2);
-    const r = game.rng.int(1, level.h - 2);
-    if (level.isWalkable(c, r) && manhattan({ col: c, row: r }, game.player) >= 6) {
+    const c = game.rng.int(1, L.w - 2);
+    const r = game.rng.int(1, L.h - 2);
+    if (L.isWalkable(c, r) && manhattan({ col: c, row: r }, game.player) >= 6) {
       game.chump = createChump(c, r);
       return;
     }
@@ -140,7 +165,6 @@ function respawnChumpFarFromPlayer() {
 function tick(g) {
   g.tick += 1;
 
-  // trap select — always allowed
   if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
   if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
   if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
@@ -155,16 +179,14 @@ function tick(g) {
   } else if (g.state === 'CHASE') {
     g.chaseTimer -= 1;
     tickPlayer(g.player, g.level);
-    tickChump(g.chump, g.level, g.rng, chumpHooks, g.traps);
+    tickChump(g.chump, g.level, g.rng, chumpHooks, g.traps, g.buildings);
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
 
-    // proximity taunt
     if (manhattan(g.player, g.chump) <= 3 && g.chump.stunTicks === 0) {
       say(g.bubbles, g.chump, g.rng.pick(TAUNTS), 'taunt', 70);
     }
 
-    // catch check: player adjacent to stunned chump
     if (g.chump.stunTicks > 0 && manhattan(g.player, g.chump) <= 1) {
       g.catches += 1;
       say(g.bubbles, g.chump, 'NOT AGAIN', 'hit', 10, 20);
@@ -176,6 +198,11 @@ function tick(g) {
       g.state = 'GAMEOVER';
       say(g.bubbles, g.chump, 'HAHAHA LOSER', 'taunt', 1, 60);
     }
+
+    if (allBuildingsDestroyed(g.buildings)) {
+      g.state = 'GAMEOVER';
+      say(g.bubbles, g.chump, 'TOTAL DESTRUCTION', 'destroy', 1, 60);
+    }
   } else if (g.state === 'GOTCHA') {
     g.gotchaTicks -= 1;
     tickParticles(g.particles);
@@ -185,14 +212,11 @@ function tick(g) {
         g.state = 'VICTORY';
       } else {
         respawnChumpFarFromPlayer();
-        // clear stun state on the new chump
         g.chump.stunTicks = 0;
         g.chump.escapeInvul = 0;
         g.state = 'CHASE';
       }
     }
-  } else if (g.state === 'VICTORY' || g.state === 'GAMEOVER') {
-    // hold until click — no ticking
   }
 
   input.endFrame();
@@ -227,7 +251,14 @@ function frame(now) {
       '  stun ' + game.chump.stunTicks,
       4, 68,
     );
-    ctx.fillText('traps placed ' + game.traps.length, 4, 80);
+    const alive = game.buildings.filter((b) => b.hp > 0).length;
+    ctx.fillText(
+      'traps ' + game.traps.length + '  buildings alive ' + alive + '/' + game.buildings.length,
+      4, 80,
+    );
+    if (game.chump.destroyTarget) {
+      ctx.fillText('target: ' + game.chump.destroyTarget.name + ' hp ' + game.chump.destroyTarget.hp, 4, 92);
+    }
   }
 
   requestAnimationFrame(frame);

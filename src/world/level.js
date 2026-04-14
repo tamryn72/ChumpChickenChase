@@ -12,6 +12,7 @@ export const TILE_TYPES = {
   COOP:      8,
   SCARECROW: 9,
   TRACTOR:  10,
+  RUBBLE:   11,
 };
 
 // Tile types that block entity movement.
@@ -24,13 +25,14 @@ export const SOLID = new Set([
   TILE_TYPES.FENCE_H,
   TILE_TYPES.SCARECROW,
   TILE_TYPES.TRACTOR,
+  // RUBBLE is walkable on purpose — destroyed buildings open paths
 ]);
 
 export class Level {
   constructor(w, h, tiles) {
     this.w = w;
     this.h = h;
-    this.tiles = tiles; // flat array, length w*h
+    this.tiles = tiles;
   }
 
   at(col, row) {
@@ -47,7 +49,6 @@ export class Level {
 
   isWalkable(col, row) {
     if (col < 0 || col >= this.w || row < 0 || row >= this.h) return false;
-    const t = this.at(col, row);
-    return !SOLID.has(t);
+    return !SOLID.has(this.at(col, row));
   }
 }

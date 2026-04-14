@@ -17,6 +17,7 @@ export function bakeAll() {
   cache.bake('tile_coop',      TILE, TILE, tiles.drawCoop);
   cache.bake('tile_scarecrow', TILE, TILE, tiles.drawScarecrow);
   cache.bake('tile_tractor',   TILE, TILE, tiles.drawTractor);
+  cache.bake('tile_rubble',    TILE, TILE, tiles.drawRubble);
 
   // --- player (16x16) ---
   cache.bake('player_up_0',    16, 16, sprites.drawPlayerUp0);

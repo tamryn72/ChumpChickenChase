@@ -1,23 +1,25 @@
-// Main scene renderer. Draws level tiles, goo, traps, entities, feathers, bubbles, HUD.
+// Main scene renderer.
 //
 // Render order each frame:
 //   1. clear
 //   2. level tiles
-//   3. goo (under entities + traps)
+//   3. goo
 //   4. traps
-//   5. entities sorted by row (painter's algorithm)
-//   6. feathers
+//   5. entities sorted by row
+//   6. pixel particles (feathers/debris/smoke/sparks)
 //   7. speech bubbles
-//   8. HUD + place cursor
+//   8. HUD + hover cursor + building HP bars
 
 import { TILE, CANVAS_W, CANVAS_H } from '../config.js';
 import * as cache from './sprite-cache.js';
 import { TILE_TYPES as T } from '../world/level.js';
 import { playerPixelPos, FACE } from '../entities/player.js';
 import { chumpPixelPos } from '../entities/chicken.js';
+import { buildingBoundingBox } from '../entities/building.js';
 import { drawGoo, drawFeathers } from '../systems/particles.js';
 import { drawBubbles } from '../systems/bubbles.js';
 import { drawHUD, drawPlaceCursor } from './ui.js';
+import { P } from './palette.js';
 
 const TILE_KEY = {
   [T.GRASS]:     'tile_grass',
@@ -30,6 +32,7 @@ const TILE_KEY = {
   [T.COOP]:      'tile_coop',
   [T.SCARECROW]: 'tile_scarecrow',
   [T.TRACTOR]:   'tile_tractor',
+  [T.RUBBLE]:    'tile_rubble',
 };
 
 const PLAYER_KEYS = {
@@ -71,12 +74,39 @@ function drawPlayer(ctx, p, alpha) {
 function drawChump(ctx, c, alpha) {
   const { x, y } = chumpPixelPos(c, alpha);
   const key = CHUMP_KEYS[c.facing][c.animFrame];
-  // shake a little when stunned
+  // stun shake
   let sx = 0, sy = 0;
   if (c.stunTicks > 0) {
     sx = (c.stunTicks % 2 === 0) ? 1 : -1;
   }
+  // attack lurch
+  if (c.attackAnim > 0) {
+    const lunge = (c.attackAnim % 2 === 0) ? 2 : -1;
+    if (c.facing === FACE.RIGHT) sx += lunge;
+    else if (c.facing === FACE.LEFT) sx -= lunge;
+    else if (c.facing === FACE.DOWN) sy += lunge;
+    else if (c.facing === FACE.UP) sy -= lunge;
+  }
   cache.draw(ctx, key, x + 4 + sx, y + 4 + sy);
+}
+
+function drawBuildingHPBars(ctx, buildings) {
+  for (const b of buildings) {
+    if (b.hp <= 0) continue;
+    if (b.hp === b.maxHp) continue; // hide when pristine to reduce clutter
+    const box = buildingBoundingBox(b);
+    const bx = box.minC * TILE + 2;
+    const by = box.minR * TILE - 5;
+    const bw = (box.maxC - box.minC + 1) * TILE - 4;
+    const bh = 3;
+    // bg
+    ctx.fillStyle = P.black;
+    ctx.fillRect(bx, by, bw, bh);
+    // fill
+    const frac = b.hp / b.maxHp;
+    ctx.fillStyle = frac > 0.5 ? P.green : frac > 0.25 ? P.yellow : P.red;
+    ctx.fillRect(bx + 1, by + 1, Math.max(0, Math.floor((bw - 2) * frac)), bh - 2);
+  }
 }
 
 export function render(ctx, game, alpha) {
@@ -97,6 +127,8 @@ export function render(ctx, game, alpha) {
   }
 
   drawFeathers(ctx, game.particles);
+
+  if (game.buildings) drawBuildingHPBars(ctx, game.buildings);
 
   drawBubbles(ctx, game.bubbles, (entity) => {
     if (entity === game.player) return playerPixelPos(entity, alpha);
