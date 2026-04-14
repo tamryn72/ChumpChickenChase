@@ -6,6 +6,17 @@
 import { TILE } from '../config.js';
 import { P } from '../render/palette.js';
 
+// Motion scale (0-1) multiplies particle burst sizes. Reduced-motion mode
+// sets this low to cut down on visual noise without removing particles
+// entirely. Defaults to 1.0.
+let motionScale = 1;
+export function setMotionScale(s) {
+  motionScale = Math.max(0, Math.min(1, s));
+}
+function scaled(n) {
+  return Math.max(1, Math.floor(n * motionScale));
+}
+
 export function createParticles(level) {
   return {
     w: level.w,
@@ -26,7 +37,8 @@ export function tickParticles(particles) {
     p.life -= 1;
     if (p.life <= 0) f.splice(i, 1);
   }
-  if (f.length > 300) f.splice(0, f.length - 300);
+  const cap = motionScale < 0.5 ? 120 : 300;
+  if (f.length > cap) f.splice(0, f.length - cap);
 }
 
 export function addGoo(particles, col, row) {
@@ -48,7 +60,8 @@ export function addFeather(particles, x, y, rng) {
 export function addDebrisBurst(particles, col, row, rng, count = 14) {
   const cx = col * TILE + TILE / 2;
   const cy = row * TILE + TILE / 2;
-  for (let i = 0; i < count; i++) {
+  const n = scaled(count);
+  for (let i = 0; i < n; i++) {
     particles.feathers.push({
       kind: 'debris',
       x: cx + rng.int(-4, 4),
@@ -60,7 +73,8 @@ export function addDebrisBurst(particles, col, row, rng, count = 14) {
       gravity: 0.25,
     });
   }
-  for (let i = 0; i < 6; i++) {
+  const smokeN = scaled(6);
+  for (let i = 0; i < smokeN; i++) {
     particles.feathers.push({
       kind: 'smoke',
       x: cx + rng.int(-6, 6),
@@ -77,7 +91,8 @@ export function addDebrisBurst(particles, col, row, rng, count = 14) {
 export function addAttackSpark(particles, col, row, rng) {
   const cx = col * TILE + TILE / 2;
   const cy = row * TILE + TILE / 2;
-  for (let i = 0; i < 4; i++) {
+  const n = scaled(4);
+  for (let i = 0; i < n; i++) {
     particles.feathers.push({
       kind: 'spark',
       x: cx + rng.int(-4, 4),
@@ -94,7 +109,8 @@ export function addAttackSpark(particles, col, row, rng) {
 export function addEggSplat(particles, col, row, rng) {
   const cx = col * TILE + TILE / 2;
   const cy = row * TILE + TILE / 2;
-  for (let i = 0; i < 12; i++) {
+  const n = scaled(12);
+  for (let i = 0; i < n; i++) {
     particles.feathers.push({
       kind: 'egg_splat',
       x: cx + rng.int(-3, 3),

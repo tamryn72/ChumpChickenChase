@@ -9,6 +9,11 @@ const DEFAULT_SAVE = {
   totalPlays: 0,
   gameComplete: false,  // set true once W5 is cleared
   clears: 0,            // how many times W5 has been beaten
+  settings: {
+    muted:         false, // global SFX mute
+    reducedMotion: false, // kills screen shake, clamps particle counts
+    highContrast:  false, // thicker sprite outlines + darker overlay
+  },
 };
 
 function canUseStorage() {
@@ -16,15 +21,26 @@ function canUseStorage() {
 }
 
 export function loadSave() {
-  if (!canUseStorage()) return { ...DEFAULT_SAVE };
+  if (!canUseStorage()) return cloneDefault();
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULT_SAVE };
+    if (!raw) return cloneDefault();
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_SAVE, ...parsed };
+    const merged = { ...cloneDefault(), ...parsed };
+    // settings is nested, so merge individually to avoid losing new fields
+    merged.settings = { ...DEFAULT_SAVE.settings, ...(parsed.settings || {}) };
+    return merged;
   } catch (e) {
-    return { ...DEFAULT_SAVE };
+    return cloneDefault();
   }
+}
+
+function cloneDefault() {
+  return {
+    ...DEFAULT_SAVE,
+    bestStats: {},
+    settings: { ...DEFAULT_SAVE.settings },
+  };
 }
 
 export function saveSave(save) {

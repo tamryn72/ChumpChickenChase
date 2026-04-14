@@ -8,5 +8,9 @@ Thumbs.db
 *.swp
 *~
 
-# Node (for future build script)
+# Node
 node_modules/
+
+# Build output — regenerate via `node tools/build.mjs`. Remove this line
+# when you want to commit dist/index.html for GitHub Pages / itch.io.
+dist/

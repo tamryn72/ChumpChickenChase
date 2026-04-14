@@ -2,6 +2,21 @@
 
 > Chronological log of what has shipped. Newest first. Format: `YYYY-MM-DD — [Milestone] — summary`.
 
+## 2026-04-14 — M13 — Polish pass (sound, settings, accessibility, dist build)
+
+- `src/audio/sfx.js` — new Web Audio procedural SFX module. Lazy-inits AudioContext on first user gesture (autoplay policy), silently no-ops if audio is unavailable. ~20 named effects built from oscillators + noise bursts: menu_cursor / menu_select / menu_back, trap_place / trap_snap, gotcha, egg_throw / egg_splat / egg_hit, rock_warn / rock_land, building_hit / building_destroy, pickup_taco / pickup_burger / pickup_cat, final_form, teleport, chump_squawk, cowabunga, victory, game_over, player_hit. Global mute + master gain wired to save state.
+- `src/main.js` — sfx calls wired into: catch, trap place/snap, building hit/destroy, final form, teleport, egg throw/splat/hit, rock spawn+land, player hit (rock), all three pickups, timer-out / total-destruction game over, victory (cutscene enter), menu navigation.
+- `systems/save.js` — `settings: { muted, reducedMotion, highContrast }` added to DEFAULT_SAVE, merged in loadSave (nested merge so new fields aren't lost on old saves). `cloneDefault` helper so mutating one save doesn't leak into another.
+- `render/menu.js` — title screen now renders a **SETTINGS** column below the world list. TAB or left/right arrow jumps focus between worlds and settings. ENTER toggles a setting. Pulsing hint shows contextual controls for whichever column is focused.
+- `render/menu.js drawPause` — new in-chase pause overlay. ESC or P pauses during CHASE; overlay offers RESUME + the same three toggles + QUIT TO MENU. Pause ticks halt gameplay (no player/chump/projectile/particle ticks during pause).
+- `main.js tickMenu` / `tickPauseMenu` — menu + pause key handling. `toggleSetting(g, key)` centralizes mutation, persistence, and side-effects (setSfxMuted / setMotionScale). Global M-key mute works from both the title screen and in-chase.
+- `main.js addShake(amt)` — new accumulator used everywhere shake was raised before. Respects `save.settings.reducedMotion`: if on, the shake is silently dropped. All direct `game.shake = Math.max(...)` writes were routed through this.
+- `systems/particles.js setMotionScale(0..1)` — new motion-scale factor that multiplies all burst sizes (debris, smoke, spark, egg_splat). Reduced-motion mode sets it to 0.35 and also lowers the feather-pool cap from 300 → 120. Defaults to 1.
+- `main.js drawAccessibilityOverlay` — high-contrast overlay applied after every render path: 3px white border + radial-gradient vignette so sprites pop against a darker frame. Toggleable per run.
+- `tools/build.mjs` — new tiny dependency-free bundler. Walks `src/`, parses import/export statements with regex (handles named imports with `as` renames, `import * as`, grouped exports, multiline braces), topologically sorts modules, wraps each in an IIFE with `__exports`, and inlines the concatenated bundle into a copy of `index.html`. Emits `dist/index.html` at ~214 KB — single double-clickable file, no relative imports, no external deps. Verified to boot cleanly under Node with browser stubs.
+- `.gitignore` — `dist/` ignored by default; commented instruction for when the user is ready to publish to GitHub Pages or itch.io.
+- `tools/smoke.mjs` — still the regression harness. Passes after all changes.
+
 ## 2026-04-14 — M12 — The Volcano (World 5) + final victory
 
 - `world/level.js` — W5 tile types: ASH, OBSIDIAN, LAVA, MAGMA_ROCK, VOLCANO_PEAK, STONE_HUT, SHRINE, CAULDRON, CRYSTAL, LOOKOUT, FORGE. Lava added to SOLID (player can't cross) but chicken.js `isStepAcceptable` treats LAVA the same as WATER so SWIM carries chump over molten rock.

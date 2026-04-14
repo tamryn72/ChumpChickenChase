@@ -119,14 +119,17 @@ Goal: load Farm tilemap, move player around, see something on a real canvas.
 - [x] Final catch → `VOLCANO_VICTORY` cutscene (player hoists chump, confetti)
 - [x] Final **GAME COMPLETE** score screen + R to PLAY AGAIN
 
-## M13 — Polish pass
+## M13 — Polish pass  *(in progress)*
 
-- [ ] Mobile touch d-pad + trap palette (unless we move it earlier)
-- [ ] Sound (if not brought in earlier)
-- [ ] Menu juice, transitions, intro screen
-- [ ] Accessibility: high-contrast toggle, reduced-motion
-- [ ] Headless `tools/sim.js` regression harness
-- [ ] Performance audit
+- [ ] Mobile touch d-pad + trap palette  *(stretch — not shipped)*
+- [x] Sound — `src/audio/sfx.js` procedural Web Audio, lazy-inited on first gesture
+- [x] Settings (mute / reduced motion / high contrast) persisted to localStorage
+- [x] Menu settings panel + in-chase pause overlay with the same toggles
+- [x] Accessibility: reduced-motion clamps particle counts + kills screen shake, high-contrast overlay adds vignette + border
+- [x] Headless regression harness  *(`tools/smoke.mjs` covers this; no separate sim.js)*
+- [x] Dist build: `tools/build.mjs` emits a single `dist/index.html` (~214 KB, no external deps)
+- [ ] Menu juice, transitions, intro screen  *(partial — title still plain fade)*
+- [ ] Performance audit  *(deferred — nothing currently feels slow)*
 
 ---
 
