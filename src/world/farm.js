@@ -5,15 +5,16 @@ import { GRID_W, GRID_H } from '../config.js';
 import { createBuilding } from '../entities/building.js';
 
 // Legend:
-//   . grass    , dirt    F fence_h    W pond      H hay
-//   B barn_w   R barn_r  C coop       S scarecrow T tractor
+//   . grass       , dirt        F fence_h    W pond      H hay
+//   B barn_w      R barn_r      C coop       S scarecrow T tractor
+//   k taco_truck_left           K taco_truck_right
 const MAP = [
   '....RRRR............',
   '....BBBB............',
   '....BBBB......C.....',
   '....BBBB............',
   '.S..................',
-  '....................',
+  '............kK......',
   '.....,,,,,,.........',
   '.....,T,,,,.....H.H.',
   '.....,,,,,,.........',
@@ -36,6 +37,8 @@ const CHAR_TO_TILE = {
   'C': T.COOP,
   'S': T.SCARECROW,
   'T': T.TRACTOR,
+  'k': T.TACO_TRUCK_L,
+  'K': T.TACO_TRUCK_R,
 };
 
 export function createFarm() {
@@ -51,7 +54,6 @@ export function createFarm() {
 
 export function createFarmBuildings() {
   return [
-    // The barn — biggest, most HP. Walls in rows 1-3 cols 4-7, roof in row 0.
     createBuilding(
       'Barn',
       12,
@@ -60,14 +62,24 @@ export function createFarmBuildings() {
         [4, 2], [5, 2], [6, 2], [7, 2],
         [4, 3], [5, 3], [6, 3], [7, 3],
       ],
-      [[4, 0], [5, 0], [6, 0], [7, 0]], // roof
+      [[4, 0], [5, 0], [6, 0], [7, 0]],
     ),
-    createBuilding('Coop',      4, [[14, 2]]),
-    createBuilding('Scarecrow', 2, [[1, 4]]),
-    createBuilding('Tractor',   5, [[6, 7]]),
-    createBuilding('Fence',     3, [[4, 10], [5, 10], [6, 10], [7, 10]]),
-    createBuilding('Hay 1',     2, [[16, 7]]),
-    createBuilding('Hay 2',     2, [[18, 7]]),
-    createBuilding('Hay 3',     2, [[1, 12]]),
+    createBuilding('Coop',       4, [[14, 2]]),
+    createBuilding('Scarecrow',  2, [[1, 4]]),
+    createBuilding('Tractor',    5, [[6, 7]]),
+    createBuilding('Fence',      3, [[4, 10], [5, 10], [6, 10], [7, 10]]),
+    createBuilding('Hay 1',      2, [[16, 7]]),
+    createBuilding('Hay 2',      2, [[18, 7]]),
+    createBuilding('Hay 3',      2, [[1, 12]]),
+    createBuilding('Taco Truck', 6, [[12, 5], [13, 5]]),
+  ];
+}
+
+// Starting positions for non-essential NPC townspeople (wander on grass, panic near Chump).
+export function createFarmTownies() {
+  return [
+    { col: 3,  row: 11, variant: 0 },
+    { col: 17, row: 12, variant: 1 },
+    { col: 10, row: 13, variant: 2 },
   ];
 }

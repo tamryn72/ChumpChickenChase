@@ -164,6 +164,75 @@ export function drawTractor(ctx) {
   ctx.fillRect(25, 14, 2, 2);
 }
 
+// Taco truck — left half (window side)
+export function drawTacoTruckL(ctx) {
+  // awning
+  ctx.fillStyle = P.darkGreen;
+  ctx.fillRect(0, 0, TILE, 4);
+  ctx.fillStyle = P.green;
+  ctx.fillRect(0, 2, TILE, 1);
+  // red trim
+  ctx.fillStyle = P.red;
+  ctx.fillRect(0, 4, TILE, 2);
+  ctx.fillRect(0, 24, TILE, 2);
+  // body
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(0, 6, TILE, 18);
+  // window frame
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(5, 9, 24, 12);
+  // window glass
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(7, 11, 20, 8);
+  // TACOS text inside window (stylized as red blocks)
+  ctx.fillStyle = P.red;
+  ctx.fillRect(9, 13, 2, 4);
+  ctx.fillRect(13, 13, 2, 4);
+  ctx.fillRect(17, 13, 2, 4);
+  ctx.fillRect(21, 13, 2, 4);
+  // wheel
+  ctx.fillStyle = P.black;
+  ctx.fillRect(6, 26, 6, 5);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(8, 28, 2, 2);
+}
+
+// Taco truck — right half (door + sign)
+export function drawTacoTruckR(ctx) {
+  // awning
+  ctx.fillStyle = P.darkGreen;
+  ctx.fillRect(0, 0, TILE, 4);
+  ctx.fillStyle = P.green;
+  ctx.fillRect(0, 2, TILE, 1);
+  // red trim
+  ctx.fillStyle = P.red;
+  ctx.fillRect(0, 4, TILE, 2);
+  ctx.fillRect(0, 24, TILE, 2);
+  // body
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(0, 6, TILE, 18);
+  // door
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(3, 8, 11, 16);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(11, 15, 1, 1);
+  // sign
+  ctx.fillStyle = P.green;
+  ctx.fillRect(18, 9, 11, 11);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(19, 11, 9, 2);
+  ctx.fillRect(19, 15, 9, 2);
+  // sign border
+  ctx.fillStyle = P.darkGreen;
+  ctx.fillRect(18, 9, 11, 1);
+  ctx.fillRect(18, 19, 11, 1);
+  // wheel
+  ctx.fillStyle = P.black;
+  ctx.fillRect(20, 26, 6, 5);
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(22, 28, 2, 2);
+}
+
 // Rubble — what building tiles become after destruction
 export function drawRubble(ctx) {
   ctx.fillStyle = P.darkGrey;

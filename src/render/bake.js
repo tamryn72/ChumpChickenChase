@@ -18,6 +18,8 @@ export function bakeAll() {
   cache.bake('tile_scarecrow', TILE, TILE, tiles.drawScarecrow);
   cache.bake('tile_tractor',   TILE, TILE, tiles.drawTractor);
   cache.bake('tile_rubble',    TILE, TILE, tiles.drawRubble);
+  cache.bake('tile_taco_l',    TILE, TILE, tiles.drawTacoTruckL);
+  cache.bake('tile_taco_r',    TILE, TILE, tiles.drawTacoTruckR);
 
   // --- player (16x16) ---
   cache.bake('player_up_0',    16, 16, sprites.drawPlayerUp0);
@@ -49,4 +51,17 @@ export function bakeAll() {
 
   // --- projectiles (8x8) ---
   cache.bake('egg', 8, 8, sprites.drawEgg);
+
+  // --- pickups (16x16) ---
+  cache.bake('pickup_cat',    16, 16, sprites.drawCat);
+  cache.bake('pickup_burger', 16, 16, sprites.drawBurger);
+  cache.bake('pickup_taco',   16, 16, sprites.drawTaco);
+
+  // --- townspeople (16x16) ---
+  cache.bake('townie_0_idle',  16, 16, sprites.drawTownie0Idle);
+  cache.bake('townie_0_panic', 16, 16, sprites.drawTownie0Panic);
+  cache.bake('townie_1_idle',  16, 16, sprites.drawTownie1Idle);
+  cache.bake('townie_1_panic', 16, 16, sprites.drawTownie1Panic);
+  cache.bake('townie_2_idle',  16, 16, sprites.drawTownie2Idle);
+  cache.bake('townie_2_panic', 16, 16, sprites.drawTownie2Panic);
 }

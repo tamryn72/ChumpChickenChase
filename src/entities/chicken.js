@@ -1,22 +1,22 @@
-// Chump the chicken. Priority AI with rage meter, final form, egg throwing.
+// Chump the chicken. Priority AI with rage, final form, pickups, eggs.
 //
-// Priority tree (per tick):
-//   1. passive rage + final-form clock
-//   2. side-action: throw egg if player in range and cooldown ready
-//   3. stunned -> hold
-//   4. attackCooldown -> hold
-//   5. destroyTarget adjacent -> attack
-//   6. destroyTarget not adjacent -> path toward
-//   7. no target -> wander
+// Priority tree (per tick, after stun + passive rage + egg side-action):
+//   1. CHASE_CAT      (mandatory override)
+//   2. HATE_TACO      (he can't resist destroying tacos)
+//   3. EAT_BURGER     (opportunistic, only if not already buffed)
+//   4. DESTROY_NEAREST building (taco truck is a building, so if no
+//                                 taco pickup on map he targets the truck)
+//   5. WANDER fallback
 
 import { TILE } from '../config.js';
 import { FACE } from './player.js';
 import { TRAP_STUN, TRAP_TYPES } from './trap.js';
 import { findNearestAliveBuilding, nearestTileOfBuilding } from './building.js';
+import { findNearestPickup, PICKUP_TYPES } from './pickup.js';
 
 const BASE_MOVE_TICKS = 4;
 
-const DX = [0, 1, 0, -1]; // FACE.UP, RIGHT, DOWN, LEFT
+const DX = [0, 1, 0, -1];
 const DY = [-1, 0, 1, 0];
 
 export const TAUNTS = [
@@ -61,6 +61,26 @@ export const FINAL_FORM_BUBBLES = [
   'UNLIMITED POWER',
 ];
 
+export const CAT_BUBBLES = [
+  'grab that pussycat',
+  'A CAT',
+  'GET THE CAT',
+  'CAT TIME',
+];
+
+export const TACO_HATE_BUBBLES = [
+  'NOT THE TACOS',
+  'I HATE TACOS',
+  'WORST FOOD EVER',
+  'DESTROYING TACOS',
+];
+
+export const BURGER_BUBBLES = [
+  'BURGER TIME',
+  'SO BIG',
+  'BEST BURGERS',
+];
+
 export function createChump(col, row) {
   return {
     col, row,
@@ -77,6 +97,7 @@ export function createChump(col, row) {
     attackAnim: 0,
     rage: 0,
     finalForm: 0,
+    burgerBuff: 0,
     eggCooldown: 30,
     ragePassiveCounter: 0,
   };
@@ -88,7 +109,9 @@ export function addRage(c, amount) {
 }
 
 function moveTicksFor(c) {
-  return c.finalForm > 0 ? 2 : BASE_MOVE_TICKS;
+  if (c.finalForm > 0) return 2;
+  if (c.burgerBuff > 0) return 3;
+  return BASE_MOVE_TICKS;
 }
 
 function facingFromTo(fromCol, fromRow, toCol, toRow) {
@@ -116,12 +139,12 @@ function moveStep(c, d, ctx) {
     );
   }
 
+  // trap check
   if (c.escapeInvul === 0 && traps) {
     const trap = traps.find(
       (t) => !t.triggered && t.col === c.col && t.row === c.row,
     );
     if (trap) {
-      // final form immunity to basic traps
       const immune = c.finalForm > 0
         && (trap.type === TRAP_TYPES.NET || trap.type === TRAP_TYPES.BANANA);
       if (!immune) {
@@ -194,34 +217,51 @@ function maybeThrowEgg(c, ctx) {
   hooks.sayEgg?.(c);
 }
 
-export function tickChump(c, ctx) {
-  const { level, rng, hooks, traps, buildings } = ctx;
+// Pickup priority — returns { target: pickup, col, row } or null
+function pickupTarget(c, ctx) {
+  const { pickups } = ctx;
+  if (!pickups) return null;
+  // cat: mandatory override
+  const cat = findNearestPickup(pickups, PICKUP_TYPES.CAT, c.col, c.row);
+  if (cat) return { kind: PICKUP_TYPES.CAT, entity: cat, col: cat.col, row: cat.row };
+  // taco: hate priority
+  const taco = findNearestPickup(pickups, PICKUP_TYPES.TACO, c.col, c.row);
+  if (taco) return { kind: PICKUP_TYPES.TACO, entity: taco, col: taco.col, row: taco.row };
+  // burger: only if not already buffed
+  if (c.burgerBuff === 0) {
+    const burger = findNearestPickup(pickups, PICKUP_TYPES.BURGER, c.col, c.row);
+    if (burger) return { kind: PICKUP_TYPES.BURGER, entity: burger, col: burger.col, row: burger.row };
+  }
+  return null;
+}
 
-  // decay attack anim regardless of state
+export function tickChump(c, ctx) {
+  const { level, rng, hooks, buildings } = ctx;
+
+  // decay timers
   if (c.attackAnim > 0) c.attackAnim -= 1;
+  if (c.burgerBuff > 0) c.burgerBuff -= 1;
 
   // final form clock
   if (c.finalForm > 0) {
     c.finalForm -= 1;
-    if (c.finalForm === 0) {
-      c.rage = 0;
-    }
+    if (c.finalForm === 0) c.rage = 0;
   } else if (c.rage >= 100) {
     c.finalForm = 50;
     hooks.onFinalForm?.(c);
   }
 
-  // passive rage (~1 per 5s)
+  // passive rage
   c.ragePassiveCounter += 1;
   if (c.ragePassiveCounter >= 50) {
     c.ragePassiveCounter = 0;
     addRage(c, 1);
   }
 
-  // side-action: throw egg if player in range
+  // side action: egg throw
   maybeThrowEgg(c, ctx);
 
-  // 1. stunned
+  // stun
   if (c.stunTicks > 0) {
     c.stunTicks -= 1;
     if (c.stunTicks === 0) {
@@ -232,7 +272,7 @@ export function tickChump(c, ctx) {
   }
   if (c.escapeInvul > 0) c.escapeInvul -= 1;
 
-  // 2. interpolation step (faster in final form)
+  // interpolation step
   const mt = moveTicksFor(c);
   if (c.moveT < mt) c.moveT += 1;
   if (c.moveT < mt) return;
@@ -240,25 +280,47 @@ export function tickChump(c, ctx) {
   c.fromCol = c.col;
   c.fromRow = c.row;
 
-  // 3. attack cooldown
+  // attack cooldown holds
   if (c.attackCooldown > 0) {
     c.attackCooldown -= 1;
     return;
   }
 
-  // 4. refresh destroy target
+  // 1. pickup priority (cat > taco > burger)
+  const pick = pickupTarget(c, ctx);
+  if (pick) {
+    const d = Math.abs(pick.col - c.col) + Math.abs(pick.row - c.row);
+    if (d === 0) {
+      // already ON the pickup — consume via hook
+      hooks.onReachPickup?.(c, pick.entity);
+      return;
+    }
+    const dirs = sortDirsToward(c, pick.col, pick.row, level);
+    for (const d2 of dirs) {
+      const tc = c.col + DX[d2];
+      const tr = c.row + DY[d2];
+      if (level.isWalkable(tc, tr)) {
+        moveStep(c, d2, ctx);
+        return;
+      }
+    }
+    // blocked, fall through to destroy logic
+  }
+
+  // 2. destroy target
   if (c.destroyTarget && c.destroyTarget.hp <= 0) c.destroyTarget = null;
   if (!c.destroyTarget && buildings && buildings.length) {
     c.destroyTarget = findNearestAliveBuilding(buildings, c.col, c.row);
   }
 
-  // 5. adjacent to target -> attack
   if (c.destroyTarget) {
     const near = nearestTileOfBuilding(c.destroyTarget, c.col, c.row);
     if (near.dist === 1) {
-      c.destroyTarget.hp -= 1;
+      // damage — 1-hit destroy when burger buffed
+      const damage = c.burgerBuff > 0 ? c.destroyTarget.maxHp : 1;
+      c.destroyTarget.hp -= damage;
       c.facing = facingFromTo(c.col, c.row, near.col, near.row);
-      c.attackCooldown = 8;
+      c.attackCooldown = c.burgerBuff > 0 ? 4 : 8;
       c.attackAnim = 4;
       addRage(c, 2);
       hooks.onAttack?.(c, c.destroyTarget, near);
@@ -268,7 +330,6 @@ export function tickChump(c, ctx) {
       }
       return;
     }
-    // 6. path toward target
     const dirs = sortDirsToward(c, near.col, near.row, level);
     for (const d of dirs) {
       const tc = c.col + DX[d];
@@ -281,7 +342,7 @@ export function tickChump(c, ctx) {
     c.destroyTarget = null;
   }
 
-  // 7. wander fallback
+  // 3. wander
   if (c.wanderCooldown > 0) {
     c.wanderCooldown -= 1;
     return;
@@ -303,7 +364,7 @@ export function tickChump(c, ctx) {
 }
 
 export function chumpPixelPos(c, alpha) {
-  const mt = c.finalForm > 0 ? 2 : BASE_MOVE_TICKS;
+  const mt = c.finalForm > 0 ? 2 : (c.burgerBuff > 0 ? 3 : BASE_MOVE_TICKS);
   const t = Math.min(1, (c.moveT + alpha) / mt);
   return {
     x: (c.fromCol + (c.col - c.fromCol) * t) * TILE,

@@ -4,17 +4,22 @@ import { CANVAS_W, CANVAS_H, TILE, TICK_MS, DEBUG, TITLE } from './config.js';
 import { createRng } from './rng.js';
 import { bakeAll } from './render/bake.js';
 import { render } from './render/renderer.js';
-import { createFarm, createFarmBuildings } from './world/farm.js';
+import { createFarm, createFarmBuildings, createFarmTownies } from './world/farm.js';
 import { TILE_TYPES as T } from './world/level.js';
 import { createPlayer, tickPlayer } from './entities/player.js';
 import {
   createChump, tickChump, addRage,
   TAUNTS, STUN_BUBBLES, ESCAPE_BUBBLES, DESTROY_BUBBLES,
   EGG_BUBBLES, FINAL_FORM_BUBBLES,
+  CAT_BUBBLES, TACO_HATE_BUBBLES, BURGER_BUBBLES,
 } from './entities/chicken.js';
 import { createTrap, TRAP_TYPES, findTrapAt } from './entities/trap.js';
 import { destroyBuilding, allBuildingsDestroyed } from './entities/building.js';
 import { createEgg, tickProjectile } from './entities/projectile.js';
+import {
+  createPickup, tickPickup, pickupAt, PICKUP_TYPES,
+} from './entities/pickup.js';
+import { createTownie, tickTownie } from './entities/npc.js';
 import {
   createParticles, tickParticles, addGoo, addFeather,
   addDebrisBurst, addAttackSpark, addEggSplat,
@@ -31,11 +36,18 @@ ctx.imageSmoothingEnabled = false;
 
 bakeAll();
 
-// --- game state ---
+// --- helpers ---
 function canonInventory() {
   return { net: 3, banana: 2, cage: 1 };
 }
+function buildTownies() {
+  return createFarmTownies().map((t) => createTownie(t.col, t.row, t.variant));
+}
+function manhattan(a, b) {
+  return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
+}
 
+// --- game state ---
 const level = createFarm();
 const game = {
   state: 'PLAN',
@@ -49,6 +61,9 @@ const game = {
   buildings: createFarmBuildings(),
   traps: [],
   projectiles: [],
+  pickups: [],
+  townies: buildTownies(),
+  pickupTimers: { taco: 120, burger: 180, cat: 240 },
   shake: 0,
   planTimer: 200,
   chaseTimer: 600,
@@ -71,6 +86,9 @@ function resetLevel() {
   game.catches = 0;
   game.traps.length = 0;
   game.projectiles.length = 0;
+  game.pickups.length = 0;
+  game.pickupTimers = { taco: 120, burger: 180, cat: 240 };
+  game.townies = buildTownies();
   game.shake = 0;
   game.inventory = canonInventory();
   game.selectedTrap = TRAP_TYPES.NET;
@@ -112,9 +130,10 @@ const chumpHooks = {
     say(game.bubbles, c, game.rng.pick(FINAL_FORM_BUBBLES), 'finalform', 120, 40);
     game.shake = Math.max(game.shake, 18);
   },
+  onReachPickup: (c, p) => collectForChump(game, p),
 };
 
-// --- canvas mouse handling ---
+// --- canvas mouse ---
 function canvasToGrid(e) {
   const rect = canvas.getBoundingClientRect();
   const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
@@ -127,12 +146,10 @@ canvas.addEventListener('mousemove', (e) => {
   game.hoverCol = col;
   game.hoverRow = row;
 });
-
 canvas.addEventListener('mouseleave', () => {
   game.hoverCol = -1;
   game.hoverRow = -1;
 });
-
 canvas.addEventListener('click', (e) => {
   if (game.state === 'VICTORY' || game.state === 'GAMEOVER') {
     resetLevel();
@@ -153,26 +170,130 @@ function tryPlaceTrap(col, row) {
   game.traps.push(createTrap(key, col, row));
 }
 
-function manhattan(a, b) {
-  return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
-}
-
 function respawnChumpFarFromPlayer() {
   const L = game.level;
   for (let attempt = 0; attempt < 60; attempt++) {
     const c = game.rng.int(1, L.w - 2);
     const r = game.rng.int(1, L.h - 2);
     if (L.isWalkable(c, r) && manhattan({ col: c, row: r }, game.player) >= 6) {
-      const rageBefore = game.chump.rage;
-      const finalBefore = game.chump.finalForm;
+      const rageBefore   = game.chump.rage;
+      const finalBefore  = game.chump.finalForm;
+      const burgerBefore = game.chump.burgerBuff;
       game.chump = createChump(c, r);
-      // carry rage through the respawn — catching doesn't cure the chicken
-      game.chump.rage = rageBefore;
-      game.chump.finalForm = finalBefore;
+      game.chump.rage       = rageBefore;
+      game.chump.finalForm  = finalBefore;
+      game.chump.burgerBuff = burgerBefore;
       return;
     }
   }
   game.chump = createChump(14, 5);
+}
+
+// --- pickup collection ---
+function collectForPlayer(g, p) {
+  if (!p || p.state !== 'idle') return;
+  if (p.type === PICKUP_TYPES.CAT) return; // cats are Chump's thing
+  if (p.type === PICKUP_TYPES.TACO) {
+    p.state = 'gone';
+    g.player.tacoBuff = 80;
+    say(g.bubbles, g.player, 'TACOS!', 'player_pickup', 20, 20);
+    return;
+  }
+  if (p.type === PICKUP_TYPES.BURGER) {
+    p.state = 'gone';
+    g.player.burgerBait += 1;
+    say(g.bubbles, g.player, 'BAIT ACQUIRED', 'player_pickup', 20, 20);
+    return;
+  }
+}
+
+function collectForChump(g, p) {
+  if (!p || p.state !== 'idle') return;
+  if (p.type === PICKUP_TYPES.CAT) {
+    // TOSS — "grab that pussycat"
+    p.state = 'tossed';
+    p.tossT = 0;
+    p.tossFromCol = p.col;
+    p.tossFromRow = p.row;
+    p.tossToCol = Math.max(1, Math.min(g.level.w - 2, p.col + g.rng.int(-3, 3)));
+    p.tossToRow = Math.max(1, Math.min(g.level.h - 2, p.row + g.rng.int(-3, 3)));
+    g.chump.attackAnim = 8;
+    say(g.bubbles, g.chump, g.rng.pick(CAT_BUBBLES), 'cat', 30, 26);
+    return;
+  }
+  if (p.type === PICKUP_TYPES.TACO) {
+    // self-stun + rage spike
+    p.state = 'gone';
+    g.chump.stunTicks = 10;
+    addRage(g.chump, 30);
+    addEggSplat(g.particles, p.col, p.row, g.rng);
+    g.shake = Math.max(g.shake, 10);
+    say(g.bubbles, g.chump, g.rng.pick(TACO_HATE_BUBBLES), 'taco_hate', 15, 30);
+    return;
+  }
+  if (p.type === PICKUP_TYPES.BURGER) {
+    p.state = 'gone';
+    g.chump.burgerBuff = 80;
+    say(g.bubbles, g.chump, g.rng.pick(BURGER_BUBBLES), 'burger', 30, 25);
+    return;
+  }
+}
+
+// --- pickup spawning ---
+function hasIdlePickup(g, type) {
+  return g.pickups.some((p) => p.type === type && p.state === 'idle');
+}
+
+function spawnPickup(g, type) {
+  if (type === PICKUP_TYPES.TACO) {
+    const truck = g.buildings.find((b) => b.name === 'Taco Truck' && b.hp > 0);
+    if (!truck) return;
+    for (const [tc, tr] of truck.tiles) {
+      for (const [dc, dr] of [[0,1],[1,0],[0,-1],[-1,0],[1,1],[-1,1]]) {
+        const c = tc + dc;
+        const r = tr + dr;
+        if (g.level.isWalkable(c, r) && !pickupAt(g.pickups, c, r)) {
+          g.pickups.push(createPickup(PICKUP_TYPES.TACO, c, r));
+          return;
+        }
+      }
+    }
+    return;
+  }
+  // burger / cat: random walkable grass/dirt/rubble tile, at least 3 from player
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const c = g.rng.int(1, g.level.w - 2);
+    const r = g.rng.int(1, g.level.h - 2);
+    if (!g.level.isWalkable(c, r)) continue;
+    const tile = g.level.at(c, r);
+    if (tile !== T.GRASS && tile !== T.DIRT && tile !== T.RUBBLE) continue;
+    if (pickupAt(g.pickups, c, r)) continue;
+    if (manhattan({ col: c, row: r }, g.player) < 3) continue;
+    g.pickups.push(createPickup(type, c, r));
+    return;
+  }
+}
+
+function tickPickups(g) {
+  for (let i = g.pickups.length - 1; i >= 0; i--) {
+    tickPickup(g.pickups[i]);
+    if (g.pickups[i].state === 'gone') g.pickups.splice(i, 1);
+  }
+  g.pickupTimers.taco   -= 1;
+  g.pickupTimers.burger -= 1;
+  g.pickupTimers.cat    -= 1;
+  if (g.pickupTimers.taco <= 0) {
+    if (!hasIdlePickup(g, PICKUP_TYPES.TACO))   spawnPickup(g, PICKUP_TYPES.TACO);
+    g.pickupTimers.taco = 180;
+  }
+  if (g.pickupTimers.burger <= 0) {
+    if (!hasIdlePickup(g, PICKUP_TYPES.BURGER)) spawnPickup(g, PICKUP_TYPES.BURGER);
+    g.pickupTimers.burger = 250;
+  }
+  if (g.pickupTimers.cat <= 0) {
+    if (!hasIdlePickup(g, PICKUP_TYPES.CAT))    spawnPickup(g, PICKUP_TYPES.CAT);
+    g.pickupTimers.cat = 300;
+  }
 }
 
 // --- projectile lifecycle ---
@@ -181,7 +302,6 @@ function tickProjectiles(g) {
     const p = g.projectiles[i];
     const done = tickProjectile(p);
     if (!done) continue;
-    // landed — check hit (within 1 tile of target counts as hit)
     const d = Math.abs(g.player.col - p.targetCol) + Math.abs(g.player.row - p.targetRow);
     if (d <= 1 && g.player.stunTicks === 0) {
       g.player.stunTicks = 5;
@@ -213,15 +333,25 @@ function tick(g) {
     tickBubbles(g.bubbles);
   } else if (g.state === 'CHASE') {
     g.chaseTimer -= 1;
+
     tickPlayer(g.player, g.level);
+    // player-side pickup collection after move
+    const pAt = pickupAt(g.pickups, g.player.col, g.player.row);
+    if (pAt) collectForPlayer(g, pAt);
+
     tickChump(g.chump, {
       level: g.level,
       rng: g.rng,
       hooks: chumpHooks,
       traps: g.traps,
       buildings: g.buildings,
+      pickups: g.pickups,
       player: g.player,
     });
+
+    for (const n of g.townies) tickTownie(n, g.level, g.rng, g.chump);
+
+    tickPickups(g);
     tickProjectiles(g);
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
@@ -285,27 +415,25 @@ function frame(now) {
     ctx.font = '10px ui-monospace, monospace';
     ctx.textAlign = 'left';
     ctx.fillText(TITLE, 4, 44);
-    ctx.fillText(
-      'tick ' + game.tick + '  state ' + game.state + '  seed ' + game.rng.seed,
-      4, 56,
-    );
+    ctx.fillText('tick ' + game.tick + '  state ' + game.state, 4, 56);
     ctx.fillText(
       'player ' + game.player.col + ',' + game.player.row +
-      '  chump ' + game.chump.col + ',' + game.chump.row +
-      '  stun ' + game.chump.stunTicks,
+      '  chump ' + game.chump.col + ',' + game.chump.row,
       4, 68,
-    );
-    const alive = game.buildings.filter((b) => b.hp > 0).length;
-    ctx.fillText(
-      'traps ' + game.traps.length +
-      '  bldg ' + alive + '/' + game.buildings.length +
-      '  eggs ' + game.projectiles.length,
-      4, 80,
     );
     ctx.fillText(
       'rage ' + game.chump.rage +
       '  final ' + game.chump.finalForm +
-      '  pStun ' + game.player.stunTicks,
+      '  burger ' + game.chump.burgerBuff +
+      '  tacoBuff ' + game.player.tacoBuff,
+      4, 80,
+    );
+    const alive = game.buildings.filter((b) => b.hp > 0).length;
+    ctx.fillText(
+      'bldg ' + alive + '/' + game.buildings.length +
+      '  pickups ' + game.pickups.length +
+      '  eggs ' + game.projectiles.length +
+      '  townies ' + game.townies.length,
       4, 92,
     );
   }

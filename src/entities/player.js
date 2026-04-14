@@ -3,7 +3,7 @@
 import { TILE } from '../config.js';
 import { input } from '../input.js';
 
-const MOVE_TICKS = 2;
+const BASE_MOVE_TICKS = 2;
 
 export const FACE = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
 
@@ -12,23 +12,30 @@ export function createPlayer(col, row) {
     col, row,
     fromCol: col,
     fromRow: row,
-    moveT: MOVE_TICKS,
+    moveT: BASE_MOVE_TICKS,
     facing: FACE.DOWN,
     animFrame: 0,
     stunTicks: 0,
+    tacoBuff: 0,   // ticks remaining of speed+buff from taco
+    burgerBait: 0, // reserved inventory — player picks up burgers as bait trap (M10 bridge)
   };
 }
 
+function movePace(p) {
+  return p.tacoBuff > 0 ? 1 : BASE_MOVE_TICKS;
+}
+
 export function tickPlayer(p, level) {
-  // egg stun: frozen, no input
+  if (p.tacoBuff > 0) p.tacoBuff -= 1;
+
   if (p.stunTicks > 0) {
     p.stunTicks -= 1;
     return;
   }
 
-  // advance interpolation
-  if (p.moveT < MOVE_TICKS) p.moveT += 1;
-  if (p.moveT < MOVE_TICKS) return;
+  const pace = movePace(p);
+  if (p.moveT < pace) p.moveT += 1;
+  if (p.moveT < pace) return;
 
   p.fromCol = p.col;
   p.fromRow = p.row;
@@ -52,7 +59,8 @@ export function tickPlayer(p, level) {
 }
 
 export function playerPixelPos(p, alpha) {
-  const t = Math.min(1, (p.moveT + alpha) / MOVE_TICKS);
+  const pace = movePace(p);
+  const t = Math.min(1, (p.moveT + alpha) / pace);
   return {
     x: (p.fromCol + (p.col - p.fromCol) * t) * TILE,
     y: (p.fromRow + (p.row - p.fromRow) * t) * TILE,

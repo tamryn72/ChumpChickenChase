@@ -1,21 +1,22 @@
 // Level / tilemap data structure.
 
 export const TILE_TYPES = {
-  EMPTY:     0,
-  GRASS:     1,
-  DIRT:      2,
-  FENCE_H:   3,
-  POND:      4,
-  HAY:       5,
-  BARN_W:    6,
-  BARN_R:    7,
-  COOP:      8,
-  SCARECROW: 9,
-  TRACTOR:  10,
-  RUBBLE:   11,
+  EMPTY:        0,
+  GRASS:        1,
+  DIRT:         2,
+  FENCE_H:      3,
+  POND:         4,
+  HAY:          5,
+  BARN_W:       6,
+  BARN_R:       7,
+  COOP:         8,
+  SCARECROW:    9,
+  TRACTOR:     10,
+  RUBBLE:      11,
+  TACO_TRUCK_L: 12,
+  TACO_TRUCK_R: 13,
 };
 
-// Tile types that block entity movement.
 export const SOLID = new Set([
   TILE_TYPES.POND,
   TILE_TYPES.HAY,
@@ -25,7 +26,8 @@ export const SOLID = new Set([
   TILE_TYPES.FENCE_H,
   TILE_TYPES.SCARECROW,
   TILE_TYPES.TRACTOR,
-  // RUBBLE is walkable on purpose — destroyed buildings open paths
+  TILE_TYPES.TACO_TRUCK_L,
+  TILE_TYPES.TACO_TRUCK_R,
 ]);
 
 export class Level {

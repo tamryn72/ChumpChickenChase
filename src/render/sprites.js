@@ -280,3 +280,166 @@ export function drawEgg(ctx) {
   ctx.fillStyle = P.chumpDeep;
   ctx.fillRect(2, 5, 1, 1);
 }
+
+// ---------------------------------------------------------------------------
+// Pickups — 16x16
+// ---------------------------------------------------------------------------
+
+export function drawCat(ctx) {
+  // body
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(3, 7, 10, 6);
+  // head
+  ctx.fillRect(4, 4, 6, 4);
+  // ears
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(4, 2, 1, 2);
+  ctx.fillRect(9, 2, 1, 2);
+  ctx.fillStyle = P.pink;
+  ctx.fillRect(4, 3, 1, 1);
+  ctx.fillRect(9, 3, 1, 1);
+  // eyes
+  ctx.fillStyle = P.green;
+  ctx.fillRect(5, 5, 1, 1);
+  ctx.fillRect(8, 5, 1, 1);
+  // nose
+  ctx.fillStyle = P.pink;
+  ctx.fillRect(6, 6, 1, 1);
+  // whiskers
+  ctx.fillStyle = P.white;
+  ctx.fillRect(2, 6, 1, 1);
+  ctx.fillRect(10, 6, 1, 1);
+  // stripes
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(5, 8, 4, 1);
+  ctx.fillRect(7, 10, 4, 1);
+  // legs
+  ctx.fillStyle = P.white;
+  ctx.fillRect(4, 13, 2, 2);
+  ctx.fillRect(11, 13, 2, 2);
+  ctx.fillRect(7, 13, 2, 2);
+  // tail
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(13, 7, 1, 4);
+  ctx.fillRect(12, 11, 2, 1);
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(13, 9, 1, 1);
+}
+
+export function drawBurger(ctx) {
+  // top bun
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(3, 4, 10, 3);
+  ctx.fillRect(4, 3, 8, 1);
+  // sesame seeds
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(5, 4, 1, 1);
+  ctx.fillRect(8, 5, 1, 1);
+  ctx.fillRect(10, 4, 1, 1);
+  // lettuce
+  ctx.fillStyle = P.green;
+  ctx.fillRect(2, 7, 12, 1);
+  // patty
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(2, 8, 12, 2);
+  // cheese
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(2, 10, 12, 1);
+  ctx.fillRect(12, 11, 2, 1);
+  // bottom bun
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(3, 11, 10, 3);
+  ctx.fillRect(4, 14, 8, 1);
+}
+
+export function drawTaco(ctx) {
+  // shell (crescent)
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(2, 5, 12, 8);
+  ctx.fillRect(3, 4, 10, 1);
+  ctx.fillRect(3, 13, 10, 1);
+  // shell edges
+  ctx.fillStyle = P.orange;
+  ctx.fillRect(2, 5, 1, 8);
+  ctx.fillRect(13, 5, 1, 8);
+  ctx.fillRect(3, 4, 10, 1);
+  // opening / filling
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(4, 6, 8, 2);
+  // lettuce bits
+  ctx.fillStyle = P.green;
+  ctx.fillRect(5, 7, 1, 1);
+  ctx.fillRect(9, 7, 1, 1);
+  // tomato bits
+  ctx.fillStyle = P.red;
+  ctx.fillRect(6, 7, 1, 1);
+  ctx.fillRect(10, 6, 1, 1);
+  // cheese
+  ctx.fillStyle = P.white;
+  ctx.fillRect(7, 8, 1, 1);
+  // shadow
+  ctx.fillStyle = P.orange;
+  ctx.fillRect(4, 12, 8, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Townspeople — 16x16, 3 variants x 2 frames (idle / panic)
+// ---------------------------------------------------------------------------
+
+const TOWNIE_HAT   = [ /* red */ '#FF004D', /* darkBlue */ '#1D2B53', /* darkGreen */ '#008751' ];
+const TOWNIE_SHIRT = [ /* pink */ '#FF77A8', /* yellow */ '#FFEC27', /* green */ '#00E436' ];
+
+function townieBody(ctx, variant, armsUp) {
+  // hat
+  ctx.fillStyle = TOWNIE_HAT[variant % 3];
+  ctx.fillRect(5, 1, 6, 2);
+  ctx.fillRect(4, 2, 8, 1);
+  // face
+  ctx.fillStyle = P.peach;
+  ctx.fillRect(5, 3, 6, 3);
+  ctx.fillStyle = P.black;
+  ctx.fillRect(6, 4, 1, 1);
+  ctx.fillRect(9, 4, 1, 1);
+  // panic mouth (O shape when armsUp)
+  ctx.fillStyle = P.black;
+  if (armsUp) {
+    ctx.fillRect(7, 5, 2, 1);
+    ctx.fillRect(7, 6, 2, 1);
+  } else {
+    ctx.fillRect(7, 5, 2, 1);
+  }
+  // shirt
+  ctx.fillStyle = TOWNIE_SHIRT[variant % 3];
+  ctx.fillRect(4, 7, 8, 4);
+  // arms (differ by state)
+  if (armsUp) {
+    ctx.fillStyle = TOWNIE_SHIRT[variant % 3];
+    ctx.fillRect(2, 4, 1, 3);
+    ctx.fillRect(13, 4, 1, 3);
+    ctx.fillStyle = P.peach;
+    ctx.fillRect(2, 3, 1, 1);
+    ctx.fillRect(13, 3, 1, 1);
+  } else {
+    ctx.fillStyle = TOWNIE_SHIRT[variant % 3];
+    ctx.fillRect(3, 7, 1, 3);
+    ctx.fillRect(12, 7, 1, 3);
+    ctx.fillStyle = P.peach;
+    ctx.fillRect(3, 10, 1, 1);
+    ctx.fillRect(12, 10, 1, 1);
+  }
+  // pants
+  ctx.fillStyle = P.darkBlue;
+  ctx.fillRect(5, 11, 2, 3);
+  ctx.fillRect(9, 11, 2, 3);
+  // shoes
+  ctx.fillStyle = P.black;
+  ctx.fillRect(5, 14, 2, 1);
+  ctx.fillRect(9, 14, 2, 1);
+}
+
+export function drawTownie0Idle(ctx)  { townieBody(ctx, 0, false); }
+export function drawTownie0Panic(ctx) { townieBody(ctx, 0, true);  }
+export function drawTownie1Idle(ctx)  { townieBody(ctx, 1, false); }
+export function drawTownie1Panic(ctx) { townieBody(ctx, 1, true);  }
+export function drawTownie2Idle(ctx)  { townieBody(ctx, 2, false); }
+export function drawTownie2Panic(ctx) { townieBody(ctx, 2, true);  }
