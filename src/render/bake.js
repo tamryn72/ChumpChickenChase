@@ -60,6 +60,10 @@ export function bakeAll() {
   cache.bake('trap_banana_triggered', 16, 16, sprites.drawTrapBananaTriggered);
   cache.bake('trap_cage',             16, 16, sprites.drawTrapCage);
   cache.bake('trap_cage_triggered',   16, 16, sprites.drawTrapCageTriggered);
+  cache.bake('trap_glue',                  16, 16, sprites.drawTrapGlue);
+  cache.bake('trap_glue_triggered',        16, 16, sprites.drawTrapGlueTriggered);
+  cache.bake('trap_corn_decoy',            16, 16, sprites.drawTrapCornDecoy);
+  cache.bake('trap_corn_decoy_triggered',  16, 16, sprites.drawTrapCornDecoyTriggered);
 
   // --- projectiles (8x8) ---
   cache.bake('egg', 8, 8, sprites.drawEgg);

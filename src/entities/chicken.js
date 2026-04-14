@@ -10,7 +10,7 @@
 
 import { TILE } from '../config.js';
 import { FACE } from './player.js';
-import { TRAP_STUN, TRAP_TYPES } from './trap.js';
+import { TRAP_STUN, TRAP_TYPES, findNearestLure } from './trap.js';
 import { findNearestAliveBuilding, nearestTileOfBuilding } from './building.js';
 import { findNearestPickup, PICKUP_TYPES } from './pickup.js';
 
@@ -304,7 +304,23 @@ export function tickChump(c, ctx) {
         return;
       }
     }
-    // blocked, fall through to destroy logic
+    // blocked, fall through
+  }
+
+  // 1b. lure traps (corn decoy) — chicken actively paths to them.
+  // When he arrives the normal trap trigger in moveStep fires.
+  const lure = findNearestLure(ctx.traps || [], c.col, c.row);
+  if (lure) {
+    const dirs = sortDirsToward(c, lure.col, lure.row, level);
+    for (const d2 of dirs) {
+      const tc = c.col + DX[d2];
+      const tr = c.row + DY[d2];
+      if (level.isWalkable(tc, tr)) {
+        moveStep(c, d2, ctx);
+        return;
+      }
+    }
+    // blocked, fall through
   }
 
   // 2. destroy target

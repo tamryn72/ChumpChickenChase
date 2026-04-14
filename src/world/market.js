@@ -16,8 +16,8 @@ export const chaseTimer = 700;
 export const cutsceneScript = 'MARKET_ESCAPE';
 
 export function inventory() {
-  return { net: 3, banana: 2, cage: 1 };
-  // glue + corn_decoy get added in M9-c
+  // W2 unlocks Glue Pad and Corn Decoy. Inventory caps at 5 per README.
+  return { net: 1, banana: 1, cage: 1, glue: 1, corn_decoy: 1 };
 }
 
 // Legend:

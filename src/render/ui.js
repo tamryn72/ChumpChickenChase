@@ -5,10 +5,21 @@ import { P } from './palette.js';
 import { TRAP_TYPES } from '../entities/trap.js';
 
 const TRAP_LABEL = {
-  [TRAP_TYPES.NET]:    '[1] NET',
-  [TRAP_TYPES.BANANA]: '[2] BAN',
-  [TRAP_TYPES.CAGE]:   '[3] CAGE',
+  [TRAP_TYPES.NET]:        '[1] NET',
+  [TRAP_TYPES.BANANA]:     '[2] BAN',
+  [TRAP_TYPES.CAGE]:       '[3] CAGE',
+  [TRAP_TYPES.GLUE]:       '[4] GLUE',
+  [TRAP_TYPES.CORN_DECOY]: '[5] CORN',
 };
+
+// Canonical display order (matches keybindings)
+const TRAP_DISPLAY_ORDER = [
+  TRAP_TYPES.CORN_DECOY,
+  TRAP_TYPES.GLUE,
+  TRAP_TYPES.CAGE,
+  TRAP_TYPES.BANANA,
+  TRAP_TYPES.NET,
+];
 
 function formatSeconds(ticks) {
   return Math.max(0, Math.ceil(ticks / 10));
@@ -52,11 +63,11 @@ export function drawHUD(ctx, game) {
     ctx.fillText('HE ESCAPED — click to retry', CANVAS_W / 2, 11);
   }
 
-  // trap palette (right)
+  // trap palette (right) — only show traps that are in this world's inventory
   ctx.textAlign = 'right';
   let x = CANVAS_W - 6;
-  const traps = [TRAP_TYPES.CAGE, TRAP_TYPES.BANANA, TRAP_TYPES.NET];
-  for (const t of traps) {
+  for (const t of TRAP_DISPLAY_ORDER) {
+    if (game.inventory[t] === undefined) continue;
     const label = `${TRAP_LABEL[t]} ${game.inventory[t]}`;
     if (t === game.selectedTrap) {
       ctx.fillStyle = P.yellow;

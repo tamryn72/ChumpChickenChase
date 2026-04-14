@@ -247,8 +247,9 @@ function tryPlaceTrap(col, row) {
   if (!game.level.isWalkable(col, row)) return;
   if (findTrapAt(game.traps, col, row)) return;
   const key = game.selectedTrap;
-  if (game.inventory[key] <= 0) return;
-  game.inventory[key] -= 1;
+  const count = game.inventory[key];
+  if (!(typeof count === 'number' && count > 0)) return;
+  game.inventory[key] = count - 1;
   game.traps.push(createTrap(key, col, row));
   game.stats.trapsPlaced += 1;
 }
@@ -428,6 +429,8 @@ function tick(g) {
     if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
     if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
     if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
+    if (input.wasPressed('Digit4')) g.selectedTrap = TRAP_TYPES.GLUE;
+    if (input.wasPressed('Digit5')) g.selectedTrap = TRAP_TYPES.CORN_DECOY;
     g.planTimer -= 1;
     if (input.wasPressed('Enter') || g.planTimer <= 0) {
       g.state = 'CHASE';
@@ -438,6 +441,8 @@ function tick(g) {
     if (input.wasPressed('Digit1')) g.selectedTrap = TRAP_TYPES.NET;
     if (input.wasPressed('Digit2')) g.selectedTrap = TRAP_TYPES.BANANA;
     if (input.wasPressed('Digit3')) g.selectedTrap = TRAP_TYPES.CAGE;
+    if (input.wasPressed('Digit4')) g.selectedTrap = TRAP_TYPES.GLUE;
+    if (input.wasPressed('Digit5')) g.selectedTrap = TRAP_TYPES.CORN_DECOY;
 
     g.chaseTimer -= 1;
     g.stats.elapsedTicks += 1;

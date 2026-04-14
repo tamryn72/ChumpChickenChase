@@ -267,6 +267,65 @@ export function drawTrapBananaTriggered(ctx){ drawBanana(ctx); drawTriggered(ctx
 export function drawTrapCage(ctx)           { drawCage(ctx); }
 export function drawTrapCageTriggered(ctx)  { drawCage(ctx); drawTriggered(ctx); }
 
+function drawGlue(ctx) {
+  // sticky honey-brown puddle
+  ctx.fillStyle = '#a67c1e';
+  ctx.fillRect(4, 4, 8, 10);
+  ctx.fillRect(2, 5, 12, 8);
+  ctx.fillRect(3, 3, 10, 12);
+  ctx.fillStyle = '#c8931f';
+  ctx.fillRect(3, 5, 10, 2);
+  ctx.fillRect(4, 7, 8, 2);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(5, 5, 2, 1);
+  ctx.fillRect(10, 5, 2, 1);
+  // sticky strands pulling up
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(5, 1, 1, 3);
+  ctx.fillRect(10, 1, 1, 3);
+  ctx.fillRect(8, 0, 1, 3);
+  // bubbles
+  ctx.fillStyle = P.white;
+  ctx.globalAlpha = 0.6;
+  ctx.fillRect(6, 8, 1, 1);
+  ctx.fillRect(11, 10, 1, 1);
+  ctx.globalAlpha = 1;
+}
+
+function drawCornDecoy(ctx) {
+  // ground patch
+  ctx.fillStyle = P.darkGreen;
+  ctx.fillRect(1, 12, 14, 3);
+  // corn pile (yellow kernels)
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(4, 6, 8, 7);
+  ctx.fillRect(3, 8, 10, 4);
+  ctx.fillRect(5, 5, 6, 1);
+  // darker shading
+  ctx.fillStyle = P.orange;
+  ctx.fillRect(3, 11, 10, 1);
+  ctx.fillRect(11, 8, 1, 4);
+  // kernel dots
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(5, 7, 1, 1);
+  ctx.fillRect(8, 8, 1, 1);
+  ctx.fillRect(10, 7, 1, 1);
+  ctx.fillRect(6, 10, 1, 1);
+  ctx.fillRect(9, 11, 1, 1);
+  // corn husks / leaves
+  ctx.fillStyle = P.darkGreen;
+  ctx.fillRect(1, 5, 2, 4);
+  ctx.fillRect(13, 5, 2, 4);
+  ctx.fillStyle = P.green;
+  ctx.fillRect(2, 5, 1, 2);
+  ctx.fillRect(13, 5, 1, 2);
+}
+
+export function drawTrapGlue(ctx)                 { drawGlue(ctx); }
+export function drawTrapGlueTriggered(ctx)        { drawGlue(ctx); drawTriggered(ctx); }
+export function drawTrapCornDecoy(ctx)            { drawCornDecoy(ctx); }
+export function drawTrapCornDecoyTriggered(ctx)   { drawCornDecoy(ctx); drawTriggered(ctx); }
+
 // ---------------------------------------------------------------------------
 // Projectiles — 8x8
 // ---------------------------------------------------------------------------
