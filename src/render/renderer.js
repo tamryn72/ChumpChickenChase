@@ -130,6 +130,21 @@ function drawPlayer(ctx, p, alpha) {
 
 function drawChump(ctx, c, alpha) {
   const { x, y } = chumpPixelPos(c, alpha);
+  // teleport flash — lavender ring that contracts into the sprite
+  if (c.teleportFlash > 0) {
+    const t = c.teleportFlash / 6;
+    ctx.globalAlpha = t;
+    ctx.strokeStyle = P.lavender;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 16, 22 - c.teleportFlash * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = t * 0.5;
+    ctx.fillStyle = P.lavender;
+    ctx.fillRect(x + 14, y + 14, 4, 4);
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1;
+  }
   // rage / burger glow
   const burger = c.burgerBuff > 0;
   if (c.rage > 50 || c.finalForm > 0 || burger) {

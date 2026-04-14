@@ -13,6 +13,7 @@ export const catchesNeeded = 2;
 export const planTimer  = 200;
 export const chaseTimer = 600;
 export const cutsceneScript = 'FARM_ESCAPE';
+export const cheats = ['dodge'];
 
 export function inventory() {
   return { net: 3, banana: 2, cage: 1 };

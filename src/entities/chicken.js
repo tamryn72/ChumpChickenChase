@@ -10,7 +10,14 @@
 
 import { TILE } from '../config.js';
 import { FACE } from './player.js';
-import { TRAP_STUN, TRAP_TYPES, findNearestLure } from './trap.js';
+import { TRAP_STUN, TRAP_TYPES, LURE_TRAPS, findNearestLure } from './trap.js';
+
+export const CHEATS = {
+  DODGE:    'dodge',
+  TELEPORT: 'teleport',
+  SWIM:     'swim',
+  CLONE:    'clone',
+};
 import { findNearestAliveBuilding, nearestTileOfBuilding } from './building.js';
 import { findNearestPickup, PICKUP_TYPES } from './pickup.js';
 
@@ -100,8 +107,17 @@ export function createChump(col, row) {
     burgerBuff: 0,
     eggCooldown: 30,
     ragePassiveCounter: 0,
+    teleportCooldown: 0,
+    teleportFlash: 0,
   };
 }
+
+export const TELEPORT_BUBBLES = [
+  'BLINK',
+  'see ya',
+  'catch me now',
+  'physics is a hoax',
+];
 
 export function addRage(c, amount) {
   if (c.finalForm > 0) return;
@@ -120,6 +136,77 @@ function facingFromTo(fromCol, fromRow, toCol, toRow) {
   if (toRow > fromRow) return FACE.DOWN;
   if (toRow < fromRow) return FACE.UP;
   return FACE.DOWN;
+}
+
+// --- cheats ---
+
+function hasCheat(ctx, name) {
+  return Array.isArray(ctx.cheats) && ctx.cheats.includes(name);
+}
+
+// Returns true if stepping to (tc, tr) is "safe enough" for chump.
+// Dodge cheat: chump avoids stepping directly into passive traps with
+// 70% probability. Lures are exempt (he wants those).
+function isStepAcceptable(c, tc, tr, ctx) {
+  if (!ctx.level.isWalkable(tc, tr)) return false;
+  if (!hasCheat(ctx, CHEATS.DODGE)) return true;
+  if (!ctx.traps) return true;
+  for (const t of ctx.traps) {
+    if (t.triggered) continue;
+    if (t.col !== tc || t.row !== tr) continue;
+    if (LURE_TRAPS.has(t.type)) return true; // never dodge lures
+    if (ctx.rng.chance(0.7)) return false;   // 70% dodge success
+    return true;
+  }
+  return true;
+}
+
+// Teleport: when cornered OR high rage, jump to a random valid tile
+// 3-6 tiles away. Cooldown prevents spam.
+function maybeTeleport(c, ctx) {
+  if (!hasCheat(ctx, CHEATS.TELEPORT)) return false;
+  if (c.teleportCooldown > 0) {
+    c.teleportCooldown -= 1;
+    return false;
+  }
+  if (c.stunTicks > 0) return false;
+
+  // count walkable neighbors
+  let walkable = 0;
+  for (let d = 0; d < 4; d++) {
+    if (ctx.level.isWalkable(c.col + DX[d], c.row + DY[d])) walkable += 1;
+  }
+  const cornered = walkable <= 1;
+  const enraged  = c.rage >= 70 && ctx.rng.chance(0.04);
+  // also flee when player is adjacent (if stunned chump about to get caught)
+  const playerAdjacent = ctx.player &&
+    Math.abs(ctx.player.col - c.col) + Math.abs(ctx.player.row - c.row) <= 1;
+  const fleeing = playerAdjacent && c.stunTicks === 0 && ctx.rng.chance(0.3);
+
+  if (!cornered && !enraged && !fleeing) return false;
+
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const dc = ctx.rng.int(-6, 6);
+    const dr = ctx.rng.int(-6, 6);
+    const dist = Math.abs(dc) + Math.abs(dr);
+    if (dist < 3 || dist > 8) continue;
+    const tc = c.col + dc;
+    const tr = c.row + dr;
+    if (!ctx.level.isWalkable(tc, tr)) continue;
+    // don't land on a triggered trap tile / adjacent to player
+    if (ctx.player && Math.abs(tc - ctx.player.col) + Math.abs(tr - ctx.player.row) <= 1) continue;
+    // teleport!
+    ctx.hooks.onTeleport?.(c, c.col, c.row, tc, tr);
+    c.fromCol = tc;
+    c.fromRow = tr;
+    c.col = tc;
+    c.row = tr;
+    c.moveT = BASE_MOVE_TICKS;      // "arrived" — no interpolation
+    c.teleportCooldown = 60;
+    c.teleportFlash = 6;
+    return true;
+  }
+  return false;
 }
 
 function moveStep(c, d, ctx) {
@@ -239,8 +326,9 @@ export function tickChump(c, ctx) {
   const { level, rng, hooks, buildings } = ctx;
 
   // decay timers
-  if (c.attackAnim > 0) c.attackAnim -= 1;
-  if (c.burgerBuff > 0) c.burgerBuff -= 1;
+  if (c.attackAnim > 0)    c.attackAnim -= 1;
+  if (c.burgerBuff > 0)    c.burgerBuff -= 1;
+  if (c.teleportFlash > 0) c.teleportFlash -= 1;
 
   // final form clock
   if (c.finalForm > 0) {
@@ -260,6 +348,9 @@ export function tickChump(c, ctx) {
 
   // side action: egg throw
   maybeThrowEgg(c, ctx);
+
+  // side action: teleport when cornered / raging / about to be caught
+  if (maybeTeleport(c, ctx)) return;
 
   // stun
   if (c.stunTicks > 0) {
@@ -299,7 +390,7 @@ export function tickChump(c, ctx) {
     for (const d2 of dirs) {
       const tc = c.col + DX[d2];
       const tr = c.row + DY[d2];
-      if (level.isWalkable(tc, tr)) {
+      if (isStepAcceptable(c, tc, tr, ctx)) {
         moveStep(c, d2, ctx);
         return;
       }
@@ -315,7 +406,7 @@ export function tickChump(c, ctx) {
     for (const d2 of dirs) {
       const tc = c.col + DX[d2];
       const tr = c.row + DY[d2];
-      if (level.isWalkable(tc, tr)) {
+      if (isStepAcceptable(c, tc, tr, ctx)) {
         moveStep(c, d2, ctx);
         return;
       }
@@ -371,7 +462,7 @@ export function tickChump(c, ctx) {
   for (const d of dirs) {
     const tc = c.col + DX[d];
     const tr = c.row + DY[d];
-    if (level.isWalkable(tc, tr)) {
+    if (isStepAcceptable(c, tc, tr, ctx)) {
       moveStep(c, d, ctx);
       return;
     }

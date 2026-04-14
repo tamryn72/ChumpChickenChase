@@ -232,6 +232,53 @@ try {
                 `rage ${wchump.rage}`);
   }
 
+  // --- M9-d: cheats don't crash tickChump ---
+  // Run a short session with dodge + teleport active, max rage so teleport
+  // fires, a trap in the middle of the chicken's path so dodge has work.
+  const cheatRng = createRng(7);
+  const cheatLvl = getWorldDef(1).createLevel();
+  const cheatBldgs = getWorldDef(1).createBuildings();
+  const cheatParticles = createParticles(cheatLvl);
+  const cheatBubbles = createBubbles();
+  const cheatPlayer = createPlayer(10, 7);
+  const cheatChump = createChump(8, 8);
+  cheatChump.rage = 85; // pre-stressed
+  const cheatTraps = [
+    createTrap(TRAP_TYPES.NET, 9, 8),
+    createTrap(TRAP_TYPES.CAGE, 7, 8),
+    createTrap(TRAP_TYPES.CORN_DECOY, 12, 12),
+  ];
+  let teleportCount = 0;
+  const cheatHooks = {
+    ...hooks,
+    addGoo:     (col, row)  => addGoo(cheatParticles, col, row),
+    addFeather: (x, y, r)   => addFeather(cheatParticles, x, y, r),
+    onTeleport: () => { teleportCount += 1; },
+    onDestroy:  (c, b) => {
+      for (const [col, row] of b.tiles) cheatLvl.set(col, row, T.RUBBLE);
+    },
+  };
+  const cheatCtx = {
+    level: cheatLvl,
+    rng: cheatRng,
+    hooks: cheatHooks,
+    traps: cheatTraps,
+    buildings: cheatBldgs,
+    pickups: [],
+    player: cheatPlayer,
+    cheats: ['dodge', 'teleport'],
+  };
+  for (let i = 0; i < 300; i++) {
+    tickChump(cheatChump, cheatCtx);
+  }
+  console.log('  cheats: teleport fires =', teleportCount);
+  // cage + corn are unchanged (if teleported over them the trigger is skipped)
+  // but at least one of net/cage/corn should be triggered via pathing
+  // or chump should have teleported at least once from the starting state
+  if (teleportCount === 0) {
+    console.warn('  WARN: teleport never fired in 300 ticks — tuning may need adjustment');
+  }
+
   // Verify menu WORLD_ORDER shape
   if (!Array.isArray(WORLD_ORDER) || WORLD_ORDER.length !== 5) {
     throw new Error('WORLD_ORDER should have 5 entries, got ' + WORLD_ORDER.length);

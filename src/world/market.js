@@ -14,6 +14,7 @@ export const catchesNeeded = 2;
 export const planTimer  = 220;
 export const chaseTimer = 700;
 export const cutsceneScript = 'MARKET_ESCAPE';
+export const cheats = ['dodge', 'teleport'];
 
 export function inventory() {
   // W2 unlocks Glue Pad and Corn Decoy. Inventory caps at 5 per README.

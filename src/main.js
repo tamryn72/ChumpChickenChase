@@ -16,6 +16,7 @@ import {
   TAUNTS, STUN_BUBBLES, ESCAPE_BUBBLES, DESTROY_BUBBLES,
   EGG_BUBBLES, FINAL_FORM_BUBBLES,
   CAT_BUBBLES, TACO_HATE_BUBBLES, BURGER_BUBBLES,
+  TELEPORT_BUBBLES,
 } from './entities/chicken.js';
 import { createTrap, TRAP_TYPES, findTrapAt } from './entities/trap.js';
 import { destroyBuilding, allBuildingsDestroyed } from './entities/building.js';
@@ -216,6 +217,13 @@ const chumpHooks = {
     game.shake = Math.max(game.shake, 18);
   },
   onReachPickup: (c, p) => collectForChump(game, p),
+  onTeleport: (c, fromCol, fromRow, toCol, toRow) => {
+    // sparkle burst at origin and destination so the jump reads
+    addAttackSpark(game.particles, fromCol, fromRow, game.rng);
+    addAttackSpark(game.particles, toCol,   toRow,   game.rng);
+    game.shake = Math.max(game.shake, 6);
+    say(game.bubbles, c, game.rng.pick(TELEPORT_BUBBLES), 'teleport', 40, 20);
+  },
 };
 
 // --- canvas mouse ---
@@ -460,6 +468,7 @@ function tick(g) {
       buildings: g.buildings,
       pickups: g.pickups,
       player: g.player,
+      cheats: g.worldDef?.cheats || [],
     });
 
     for (const n of g.townies) tickTownie(n, g.level, g.rng, g.chump);
