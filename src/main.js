@@ -8,17 +8,16 @@ import { createFarm, createFarmBuildings } from './world/farm.js';
 import { TILE_TYPES as T } from './world/level.js';
 import { createPlayer, tickPlayer } from './entities/player.js';
 import {
-  createChump, tickChump, TAUNTS, STUN_BUBBLES, ESCAPE_BUBBLES, DESTROY_BUBBLES,
+  createChump, tickChump, addRage,
+  TAUNTS, STUN_BUBBLES, ESCAPE_BUBBLES, DESTROY_BUBBLES,
+  EGG_BUBBLES, FINAL_FORM_BUBBLES,
 } from './entities/chicken.js';
-import {
-  createTrap, TRAP_TYPES, findTrapAt,
-} from './entities/trap.js';
-import {
-  destroyBuilding, allBuildingsDestroyed,
-} from './entities/building.js';
+import { createTrap, TRAP_TYPES, findTrapAt } from './entities/trap.js';
+import { destroyBuilding, allBuildingsDestroyed } from './entities/building.js';
+import { createEgg, tickProjectile } from './entities/projectile.js';
 import {
   createParticles, tickParticles, addGoo, addFeather,
-  addDebrisBurst, addAttackSpark,
+  addDebrisBurst, addAttackSpark, addEggSplat,
 } from './systems/particles.js';
 import { createBubbles, tickBubbles, say } from './systems/bubbles.js';
 import { input } from './input.js';
@@ -49,6 +48,8 @@ const game = {
   bubbles: createBubbles(),
   buildings: createFarmBuildings(),
   traps: [],
+  projectiles: [],
+  shake: 0,
   planTimer: 200,
   chaseTimer: 600,
   catches: 0,
@@ -61,7 +62,6 @@ const game = {
 };
 
 function resetLevel() {
-  // rebuild the tilemap fresh — destroyed tiles should come back
   const freshLevel = createFarm();
   game.level = freshLevel;
   game.buildings = createFarmBuildings();
@@ -70,6 +70,8 @@ function resetLevel() {
   game.chaseTimer = 600;
   game.catches = 0;
   game.traps.length = 0;
+  game.projectiles.length = 0;
+  game.shake = 0;
   game.inventory = canonInventory();
   game.selectedTrap = TRAP_TYPES.NET;
   game.player = createPlayer(10, 7);
@@ -79,21 +81,19 @@ function resetLevel() {
   game.gotchaTicks = 0;
 }
 
-// --- hooks for chicken AI to fire particles / speech / destruction ---
+// --- hooks for chicken AI ---
 const chumpHooks = {
   addGoo:     (col, row)  => addGoo(game.particles, col, row),
   addFeather: (x, y, rng) => addFeather(game.particles, x, y, rng),
-  onTrapped:  (c)         => say(game.bubbles, c, game.rng.pick(STUN_BUBBLES),   'hit', 30, 22),
-  onEscape:   (c)         => say(game.bubbles, c, game.rng.pick(ESCAPE_BUBBLES), 'escape', 50, 22),
+  onTrapped:  (c) => say(game.bubbles, c, game.rng.pick(STUN_BUBBLES),   'hit', 30, 22),
+  onEscape:   (c) => say(game.bubbles, c, game.rng.pick(ESCAPE_BUBBLES), 'escape', 50, 22),
   onAttack:   (c, building, near) => {
     addAttackSpark(game.particles, near.col, near.row, game.rng);
-    // occasional taunt
     if (game.rng.chance(0.3)) {
       say(game.bubbles, c, game.rng.pick(DESTROY_BUBBLES), 'destroy', 60, 22);
     }
   },
-  onDestroy:  (c, building) => {
-    // rubble-ize and spawn a big debris burst at each tile
+  onDestroy: (c, building) => {
     destroyBuilding(building, game.level, T.RUBBLE);
     for (const [col, row] of building.tiles) {
       addDebrisBurst(game.particles, col, row, game.rng);
@@ -102,6 +102,15 @@ const chumpHooks = {
       addDebrisBurst(game.particles, col, row, game.rng, 6);
     }
     say(game.bubbles, c, 'DEMOLISHED', 'destroy', 20, 30);
+    game.shake = Math.max(game.shake, 8);
+  },
+  spawnEgg: (fc, fr, tc, tr) => {
+    game.projectiles.push(createEgg(fc, fr, tc, tr));
+  },
+  sayEgg: (c) => say(game.bubbles, c, game.rng.pick(EGG_BUBBLES), 'egg', 40, 22),
+  onFinalForm: (c) => {
+    say(game.bubbles, c, game.rng.pick(FINAL_FORM_BUBBLES), 'finalform', 120, 40);
+    game.shake = Math.max(game.shake, 18);
   },
 };
 
@@ -149,16 +158,42 @@ function manhattan(a, b) {
 }
 
 function respawnChumpFarFromPlayer() {
-  const { level: L } = game;
+  const L = game.level;
   for (let attempt = 0; attempt < 60; attempt++) {
     const c = game.rng.int(1, L.w - 2);
     const r = game.rng.int(1, L.h - 2);
     if (L.isWalkable(c, r) && manhattan({ col: c, row: r }, game.player) >= 6) {
+      const rageBefore = game.chump.rage;
+      const finalBefore = game.chump.finalForm;
       game.chump = createChump(c, r);
+      // carry rage through the respawn — catching doesn't cure the chicken
+      game.chump.rage = rageBefore;
+      game.chump.finalForm = finalBefore;
       return;
     }
   }
   game.chump = createChump(14, 5);
+}
+
+// --- projectile lifecycle ---
+function tickProjectiles(g) {
+  for (let i = g.projectiles.length - 1; i >= 0; i--) {
+    const p = g.projectiles[i];
+    const done = tickProjectile(p);
+    if (!done) continue;
+    // landed — check hit (within 1 tile of target counts as hit)
+    const d = Math.abs(g.player.col - p.targetCol) + Math.abs(g.player.row - p.targetRow);
+    if (d <= 1 && g.player.stunTicks === 0) {
+      g.player.stunTicks = 5;
+      g.shake = Math.max(g.shake, 14);
+      addRage(g.chump, 5);
+      addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
+      say(g.bubbles, g.chump, 'DIRECT HIT', 'egg_hit', 20, 22);
+    } else {
+      addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
+    }
+    g.projectiles.splice(i, 1);
+  }
 }
 
 // --- tick routing by state ---
@@ -179,9 +214,19 @@ function tick(g) {
   } else if (g.state === 'CHASE') {
     g.chaseTimer -= 1;
     tickPlayer(g.player, g.level);
-    tickChump(g.chump, g.level, g.rng, chumpHooks, g.traps, g.buildings);
+    tickChump(g.chump, {
+      level: g.level,
+      rng: g.rng,
+      hooks: chumpHooks,
+      traps: g.traps,
+      buildings: g.buildings,
+      player: g.player,
+    });
+    tickProjectiles(g);
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
+
+    if (g.shake > 0) g.shake -= 1;
 
     if (manhattan(g.player, g.chump) <= 3 && g.chump.stunTicks === 0) {
       say(g.bubbles, g.chump, g.rng.pick(TAUNTS), 'taunt', 70);
@@ -207,13 +252,12 @@ function tick(g) {
     g.gotchaTicks -= 1;
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
+    if (g.shake > 0) g.shake -= 1;
     if (g.gotchaTicks <= 0) {
       if (g.catches >= g.catchesNeeded) {
         g.state = 'VICTORY';
       } else {
         respawnChumpFarFromPlayer();
-        g.chump.stunTicks = 0;
-        g.chump.escapeInvul = 0;
         g.state = 'CHASE';
       }
     }
@@ -253,12 +297,17 @@ function frame(now) {
     );
     const alive = game.buildings.filter((b) => b.hp > 0).length;
     ctx.fillText(
-      'traps ' + game.traps.length + '  buildings alive ' + alive + '/' + game.buildings.length,
+      'traps ' + game.traps.length +
+      '  bldg ' + alive + '/' + game.buildings.length +
+      '  eggs ' + game.projectiles.length,
       4, 80,
     );
-    if (game.chump.destroyTarget) {
-      ctx.fillText('target: ' + game.chump.destroyTarget.name + ' hp ' + game.chump.destroyTarget.hp, 4, 92);
-    }
+    ctx.fillText(
+      'rage ' + game.chump.rage +
+      '  final ' + game.chump.finalForm +
+      '  pStun ' + game.player.stunTicks,
+      4, 92,
+    );
   }
 
   requestAnimationFrame(frame);

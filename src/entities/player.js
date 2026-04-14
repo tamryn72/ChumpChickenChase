@@ -3,7 +3,7 @@
 import { TILE } from '../config.js';
 import { input } from '../input.js';
 
-const MOVE_TICKS = 2; // logic ticks to cross one tile
+const MOVE_TICKS = 2;
 
 export const FACE = { UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
 
@@ -12,20 +12,24 @@ export function createPlayer(col, row) {
     col, row,
     fromCol: col,
     fromRow: row,
-    moveT: MOVE_TICKS, // starts "arrived"
+    moveT: MOVE_TICKS,
     facing: FACE.DOWN,
     animFrame: 0,
+    stunTicks: 0,
   };
 }
 
 export function tickPlayer(p, level) {
-  // advance interpolation
-  if (p.moveT < MOVE_TICKS) {
-    p.moveT += 1;
+  // egg stun: frozen, no input
+  if (p.stunTicks > 0) {
+    p.stunTicks -= 1;
+    return;
   }
+
+  // advance interpolation
+  if (p.moveT < MOVE_TICKS) p.moveT += 1;
   if (p.moveT < MOVE_TICKS) return;
 
-  // arrived — accept new input
   p.fromCol = p.col;
   p.fromRow = p.row;
 

@@ -1,7 +1,7 @@
 // Particle systems:
-//   - goo     : tile-bound, accumulates where Chump has walked
-//   - feathers: pixel-space, short-lived, gravity — also doubles as the
-//               pool for debris/spark particles via a kind flag
+//   - goo      : tile-bound, accumulates where Chump has walked
+//   - feathers : pixel-space pool. Kind flag distinguishes visual behavior:
+//                feather | debris | smoke | spark | egg_splat
 
 import { TILE } from '../config.js';
 import { P } from '../render/palette.js';
@@ -10,7 +10,7 @@ export function createParticles(level) {
   return {
     w: level.w,
     h: level.h,
-    goo: new Array(level.w * level.h).fill(0), // 0..3 intensity
+    goo: new Array(level.w * level.h).fill(0),
     feathers: [],
   };
 }
@@ -60,7 +60,6 @@ export function addDebrisBurst(particles, col, row, rng, count = 14) {
       gravity: 0.25,
     });
   }
-  // add a few smoke puffs that float up
   for (let i = 0; i < 6; i++) {
     particles.feathers.push({
       kind: 'smoke',
@@ -92,7 +91,23 @@ export function addAttackSpark(particles, col, row, rng) {
   }
 }
 
-// Draw goo tiles — UNDER entities
+export function addEggSplat(particles, col, row, rng) {
+  const cx = col * TILE + TILE / 2;
+  const cy = row * TILE + TILE / 2;
+  for (let i = 0; i < 12; i++) {
+    particles.feathers.push({
+      kind: 'egg_splat',
+      x: cx + rng.int(-3, 3),
+      y: cy + rng.int(-3, 3),
+      vx: (rng.next() - 0.5) * 4.5,
+      vy: -rng.next() * 2 - 0.8,
+      life: 16 + rng.int(0, 12),
+      drag: 0.86,
+      gravity: 0.25,
+    });
+  }
+}
+
 export function drawGoo(ctx, particles) {
   ctx.fillStyle = P.chumpOrange;
   for (let r = 0; r < particles.h; r++) {
@@ -112,7 +127,6 @@ export function drawGoo(ctx, particles) {
   ctx.globalAlpha = 1;
 }
 
-// Draw pixel-space particles (feathers, debris, smoke, sparks) — OVER entities
 export function drawFeathers(ctx, particles) {
   for (const f of particles.feathers) {
     const px = f.x | 0;
@@ -134,8 +148,13 @@ export function drawFeathers(ctx, particles) {
       ctx.fillStyle = P.white;
       ctx.fillRect(px - 1, py, 1, 1);
       ctx.fillRect(px + 1, py, 1, 1);
+    } else if (f.kind === 'egg_splat') {
+      ctx.globalAlpha = Math.min(1, f.life / 22);
+      ctx.fillStyle = P.yellow;
+      ctx.fillRect(px - 1, py - 1, 2, 2);
+      ctx.fillStyle = P.white;
+      ctx.fillRect(px, py, 1, 1);
     } else {
-      // feather
       ctx.globalAlpha = Math.min(1, f.life / 22);
       ctx.fillStyle = P.white;
       ctx.fillRect(px - 1, py, 2, 1);

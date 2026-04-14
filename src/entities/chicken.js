@@ -1,17 +1,20 @@
-// Chump the chicken. Priority AI:
-//   1. stunned: hold
-//   2. attack-cooldown: hold
-//   3. destroy nearest alive building (path + attack when adjacent)
-//   4. wander fallback
+// Chump the chicken. Priority AI with rage meter, final form, egg throwing.
+//
+// Priority tree (per tick):
+//   1. passive rage + final-form clock
+//   2. side-action: throw egg if player in range and cooldown ready
+//   3. stunned -> hold
+//   4. attackCooldown -> hold
+//   5. destroyTarget adjacent -> attack
+//   6. destroyTarget not adjacent -> path toward
+//   7. no target -> wander
 
 import { TILE } from '../config.js';
 import { FACE } from './player.js';
 import { TRAP_STUN, TRAP_TYPES } from './trap.js';
-import {
-  findNearestAliveBuilding, nearestTileOfBuilding,
-} from './building.js';
+import { findNearestAliveBuilding, nearestTileOfBuilding } from './building.js';
 
-const MOVE_TICKS = 4;
+const BASE_MOVE_TICKS = 4;
 
 const DX = [0, 1, 0, -1]; // FACE.UP, RIGHT, DOWN, LEFT
 const DY = [-1, 0, 1, 0];
@@ -46,12 +49,24 @@ export const DESTROY_BUBBLES = [
   'DESTROYING GREATLY',
 ];
 
+export const EGG_BUBBLES = [
+  'EGG TIME',
+  'NO EGGS FOR YOU',
+  'SPECIAL DELIVERY',
+];
+
+export const FINAL_FORM_BUBBLES = [
+  'FINAL FORM',
+  'YOU CANNOT STOP ME',
+  'UNLIMITED POWER',
+];
+
 export function createChump(col, row) {
   return {
     col, row,
     fromCol: col,
     fromRow: row,
-    moveT: MOVE_TICKS,
+    moveT: BASE_MOVE_TICKS,
     facing: FACE.DOWN,
     animFrame: 0,
     wanderCooldown: 0,
@@ -60,7 +75,20 @@ export function createChump(col, row) {
     destroyTarget: null,
     attackCooldown: 0,
     attackAnim: 0,
+    rage: 0,
+    finalForm: 0,
+    eggCooldown: 30,
+    ragePassiveCounter: 0,
   };
+}
+
+export function addRage(c, amount) {
+  if (c.finalForm > 0) return;
+  c.rage = Math.min(100, c.rage + amount);
+}
+
+function moveTicksFor(c) {
+  return c.finalForm > 0 ? 2 : BASE_MOVE_TICKS;
 }
 
 function facingFromTo(fromCol, fromRow, toCol, toRow) {
@@ -71,7 +99,8 @@ function facingFromTo(fromCol, fromRow, toCol, toRow) {
   return FACE.DOWN;
 }
 
-function moveStep(c, d, rng, hooks, traps, level) {
+function moveStep(c, d, ctx) {
+  const { rng, hooks, traps, level } = ctx;
   c.facing = d;
   c.col = c.col + DX[d];
   c.row = c.row + DY[d];
@@ -87,25 +116,32 @@ function moveStep(c, d, rng, hooks, traps, level) {
     );
   }
 
-  // trap check on arrival tile
   if (c.escapeInvul === 0 && traps) {
     const trap = traps.find(
       (t) => !t.triggered && t.col === c.col && t.row === c.row,
     );
     if (trap) {
-      trap.triggered = true;
-      c.stunTicks = TRAP_STUN[trap.type];
-      c.destroyTarget = null;
-      hooks.onTrapped?.(c, trap);
-      if (trap.type === TRAP_TYPES.BANANA) {
-        const sc = c.col + DX[d];
-        const sr = c.row + DY[d];
-        if (level.isWalkable(sc, sr)) {
-          c.fromCol = c.col;
-          c.fromRow = c.row;
-          c.col = sc;
-          c.row = sr;
-          c.moveT = 0;
+      // final form immunity to basic traps
+      const immune = c.finalForm > 0
+        && (trap.type === TRAP_TYPES.NET || trap.type === TRAP_TYPES.BANANA);
+      if (!immune) {
+        trap.triggered = true;
+        let stun = TRAP_STUN[trap.type];
+        if (c.finalForm > 0 && trap.type === TRAP_TYPES.CAGE) stun = 10;
+        c.stunTicks = stun;
+        c.destroyTarget = null;
+        addRage(c, 10);
+        hooks.onTrapped?.(c, trap);
+        if (trap.type === TRAP_TYPES.BANANA) {
+          const sc = c.col + DX[d];
+          const sr = c.row + DY[d];
+          if (level.isWalkable(sc, sr)) {
+            c.fromCol = c.col;
+            c.fromRow = c.row;
+            c.col = sc;
+            c.row = sr;
+            c.moveT = 0;
+          }
         }
       }
     }
@@ -142,9 +178,48 @@ function shuffledWanderDirs(c, rng) {
   return dirs;
 }
 
-export function tickChump(c, level, rng, hooks, traps, buildings) {
-  // decay attack animation timer regardless of state
+function maybeThrowEgg(c, ctx) {
+  const { player, hooks, rng } = ctx;
+  if (c.stunTicks > 0) return;
+  if (c.eggCooldown > 0) {
+    c.eggCooldown -= 1;
+    return;
+  }
+  if (!player) return;
+  const dist = Math.abs(player.col - c.col) + Math.abs(player.row - c.row);
+  if (dist < 2 || dist > 7) return;
+  c.facing = facingFromTo(c.col, c.row, player.col, player.row);
+  c.eggCooldown = 40 + rng.int(0, 20);
+  hooks.spawnEgg?.(c.col, c.row, player.col, player.row);
+  hooks.sayEgg?.(c);
+}
+
+export function tickChump(c, ctx) {
+  const { level, rng, hooks, traps, buildings } = ctx;
+
+  // decay attack anim regardless of state
   if (c.attackAnim > 0) c.attackAnim -= 1;
+
+  // final form clock
+  if (c.finalForm > 0) {
+    c.finalForm -= 1;
+    if (c.finalForm === 0) {
+      c.rage = 0;
+    }
+  } else if (c.rage >= 100) {
+    c.finalForm = 50;
+    hooks.onFinalForm?.(c);
+  }
+
+  // passive rage (~1 per 5s)
+  c.ragePassiveCounter += 1;
+  if (c.ragePassiveCounter >= 50) {
+    c.ragePassiveCounter = 0;
+    addRage(c, 1);
+  }
+
+  // side-action: throw egg if player in range
+  maybeThrowEgg(c, ctx);
 
   // 1. stunned
   if (c.stunTicks > 0) {
@@ -157,27 +232,27 @@ export function tickChump(c, level, rng, hooks, traps, buildings) {
   }
   if (c.escapeInvul > 0) c.escapeInvul -= 1;
 
-  // 2. interpolation step
-  if (c.moveT < MOVE_TICKS) c.moveT += 1;
-  if (c.moveT < MOVE_TICKS) return;
+  // 2. interpolation step (faster in final form)
+  const mt = moveTicksFor(c);
+  if (c.moveT < mt) c.moveT += 1;
+  if (c.moveT < mt) return;
 
-  // 3. arrived — update "from" anchor
   c.fromCol = c.col;
   c.fromRow = c.row;
 
-  // 4. attack cooldown: hold in place a beat between pecks
+  // 3. attack cooldown
   if (c.attackCooldown > 0) {
     c.attackCooldown -= 1;
     return;
   }
 
-  // 5. refresh destroy target
+  // 4. refresh destroy target
   if (c.destroyTarget && c.destroyTarget.hp <= 0) c.destroyTarget = null;
   if (!c.destroyTarget && buildings && buildings.length) {
     c.destroyTarget = findNearestAliveBuilding(buildings, c.col, c.row);
   }
 
-  // 6. if adjacent to target, attack!
+  // 5. adjacent to target -> attack
   if (c.destroyTarget) {
     const near = nearestTileOfBuilding(c.destroyTarget, c.col, c.row);
     if (near.dist === 1) {
@@ -185,6 +260,7 @@ export function tickChump(c, level, rng, hooks, traps, buildings) {
       c.facing = facingFromTo(c.col, c.row, near.col, near.row);
       c.attackCooldown = 8;
       c.attackAnim = 4;
+      addRage(c, 2);
       hooks.onAttack?.(c, c.destroyTarget, near);
       if (c.destroyTarget.hp <= 0) {
         hooks.onDestroy?.(c, c.destroyTarget);
@@ -192,21 +268,20 @@ export function tickChump(c, level, rng, hooks, traps, buildings) {
       }
       return;
     }
-    // 7. path toward target
+    // 6. path toward target
     const dirs = sortDirsToward(c, near.col, near.row, level);
     for (const d of dirs) {
       const tc = c.col + DX[d];
       const tr = c.row + DY[d];
       if (level.isWalkable(tc, tr)) {
-        moveStep(c, d, rng, hooks, traps, level);
+        moveStep(c, d, ctx);
         return;
       }
     }
-    // blocked — give up and wander
     c.destroyTarget = null;
   }
 
-  // 8. wander fallback
+  // 7. wander fallback
   if (c.wanderCooldown > 0) {
     c.wanderCooldown -= 1;
     return;
@@ -220,7 +295,7 @@ export function tickChump(c, level, rng, hooks, traps, buildings) {
     const tc = c.col + DX[d];
     const tr = c.row + DY[d];
     if (level.isWalkable(tc, tr)) {
-      moveStep(c, d, rng, hooks, traps, level);
+      moveStep(c, d, ctx);
       return;
     }
   }
@@ -228,7 +303,8 @@ export function tickChump(c, level, rng, hooks, traps, buildings) {
 }
 
 export function chumpPixelPos(c, alpha) {
-  const t = Math.min(1, (c.moveT + alpha) / MOVE_TICKS);
+  const mt = c.finalForm > 0 ? 2 : BASE_MOVE_TICKS;
+  const t = Math.min(1, (c.moveT + alpha) / mt);
   return {
     x: (c.fromCol + (c.col - c.fromCol) * t) * TILE,
     y: (c.fromRow + (c.row - c.fromRow) * t) * TILE,

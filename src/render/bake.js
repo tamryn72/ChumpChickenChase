@@ -46,4 +46,7 @@ export function bakeAll() {
   cache.bake('trap_banana_triggered', 16, 16, sprites.drawTrapBananaTriggered);
   cache.bake('trap_cage',             16, 16, sprites.drawTrapCage);
   cache.bake('trap_cage_triggered',   16, 16, sprites.drawTrapCageTriggered);
+
+  // --- projectiles (8x8) ---
+  cache.bake('egg', 8, 8, sprites.drawEgg);
 }

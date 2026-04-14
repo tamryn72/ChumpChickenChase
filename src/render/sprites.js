@@ -266,3 +266,17 @@ export function drawTrapBanana(ctx)         { drawBanana(ctx); }
 export function drawTrapBananaTriggered(ctx){ drawBanana(ctx); drawTriggered(ctx); }
 export function drawTrapCage(ctx)           { drawCage(ctx); }
 export function drawTrapCageTriggered(ctx)  { drawCage(ctx); drawTriggered(ctx); }
+
+// ---------------------------------------------------------------------------
+// Projectiles — 8x8
+// ---------------------------------------------------------------------------
+
+export function drawEgg(ctx) {
+  ctx.fillStyle = P.white;
+  ctx.fillRect(2, 1, 4, 6);
+  ctx.fillRect(1, 2, 6, 4);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(3, 2, 2, 2);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(2, 5, 1, 1);
+}
