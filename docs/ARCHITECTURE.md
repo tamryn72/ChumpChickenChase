@@ -187,13 +187,22 @@ Each tick, pick the highest-priority action whose preconditions are met:
 ## Persistence
 
 ```js
-localStorage['trumplestiltskin'] = {
+localStorage['chump_chicken_chase_v1'] = {
   worldsUnlocked: 1,        // 1-5
   bestStats: { ... },       // per-world: catches, traps used, buildings saved, time
-  seed: null,               // if set, forces deterministic runs (dev)
-  audioMuted: false,
+  totalPlays: 0,
+  gameComplete: false,      // true once W5 is cleared
+  clears: 0,                // how many times W5 has been beaten
+  ordersSeen: {             // cumulative Executive Cluck flavors seen
+    speed: false, supersonic: false, foxes: false, tropical: false,
+  },
+  settings: {
+    muted: false, volume: 1.0, reducedMotion: false, highContrast: false,
+  },
 };
 ```
+
+`loadSave()` in `src/systems/save.js` uses a nested-merge pattern so old saves pick up new fields on upgrade without losing existing state.
 
 ## Debug mode (`?debug=1`)
 
@@ -206,6 +215,7 @@ localStorage['trumplestiltskin'] = {
 - Seed display + reseed hotkey
 - Time scale slider (slowmo for debugging)
 
-## Headless sim harness (`tools/sim.js`)
+## Tooling
 
-Runs N ticks with seeded chicken AI against a fixed level map, logs events (catches, trap triggers, buildings destroyed, taunts). Used to regression-test AI changes without opening a browser. Node-only, imports the same `src/systems/ai.js` modules via ES module imports.
+- **`tools/smoke.mjs`** — headless regression harness. Runs the simulation under Node stubs across all 5 worlds, exercises catches/traps/cheats, and verifies the save roundtrip. Chicken AI lives in `src/entities/chicken.js` (not a separate `ai.js`) and is imported directly. Run with `node tools/smoke.mjs`.
+- **`tools/build.mjs`** — dependency-free ESM bundler. Walks `src/`, regex-parses imports/exports, topologically sorts modules, wraps each in an IIFE with a `__exports` object, and inlines the concatenation into `dist/index.html`. Output is a single double-clickable file suitable for itch.io. Run with `node tools/build.mjs`. See `docs/PUBLISHING.md` for publishing paths.

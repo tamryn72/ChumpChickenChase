@@ -2,7 +2,7 @@
 
 > Each milestone should be **shippable** — playable in a browser, even if partial. Plan is a working draft, not a contract — reorder, cut, or expand as we learn.
 
-## M0 — Docs & scaffolding  *(in progress)*
+## M0 — Docs & scaffolding  *(shipped)*
 
 - [x] `CLAUDE.md`
 - [x] `docs/MEMORY.md`
@@ -10,11 +10,11 @@
 - [x] `docs/ARCHITECTURE.md`
 - [x] `docs/PLAN.md`
 - [x] `docs/SESSION_HANDOFF.md`
-- [ ] `index.html` skeleton with canvas + module entry
-- [ ] `src/main.js` empty game loop (BOOT → MENU)
-- [ ] `src/config.js` with current constants
-- [ ] `src/rng.js` — mulberry32
-- [ ] `.gitignore`
+- [x] `index.html` skeleton with canvas + module entry
+- [x] `src/main.js` empty game loop (BOOT → MENU)
+- [x] `src/config.js` with current constants
+- [x] `src/rng.js` — mulberry32
+- [x] `.gitignore`
 
 ## M1 — Walking farmer
 
@@ -287,7 +287,7 @@ You're providing no assets, so every visual comes from code. Three paths:
 - **Trap inventory**: fixed per-world count, or replenishable over chase time?
 - **Egg throw cooldown**: default ~4s
 - **Final Form duration**: default ~5s
-- **Title on screen**: "Trumplestiltskin: Orange Chicken Chaos" (title + subtitle)?
+- **Title on screen**: *resolved* — "CHUMP CHICKEN CHASE" with "CHASE THE ORANGE MENACE" tagline subtitle
 - **Difficulty curve**: easy W1 for vibe, ramp from W3?
 - **Color palette** (if we go procedural): leaning PICO-8 16-color (iconic, free, looks great).
 

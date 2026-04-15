@@ -53,8 +53,10 @@ push to `main` auto-redeploys.
 3. **Wait ~30 seconds**, then visit:
 
    ```
-   https://tamryn72.github.io/trumplestiltskin/
+   https://tamryn72.github.io/Trumplestiltskin/
    ```
+
+   > Note the capital `T` — Pages URLs preserve the repo name's casing.
 
    The first deploy takes a minute or two. After that, every push to `main`
    redeploys within seconds.
