@@ -27,20 +27,52 @@ As a result, `dist/` stays in `.gitignore`. Nothing committed there.
 
 1. Merge `claude/publishing-guide-bZm18` → `main` and push
 2. Repo **Settings → Pages → Deploy from branch → main / (root) → Save**
-3. Wait for first deploy, visit `https://tamryn72.github.io/trumplestiltskin/`
+3. Wait for first deploy, visit `https://tamryn72.github.io/Trumplestiltskin/` (capital T — Pages preserves repo case)
 4. Playtest live — especially audio balance and mobile touch
 5. When ready for itch.io, follow Path B in `docs/PUBLISHING.md`
 
-### Smoke + build
+### Pre-publish audit fixes
 
-- `node tools/smoke.mjs` → OK
-- `node tools/build.mjs` → `dist/index.html` at 264.8 KB, parses clean
+After the first publishing commit, a full audit turned up a batch of loose ends. All fixed in the same branch:
+
+- **`src/render/menu.js:163`** — title-screen subtitle was still "ORANGE CHICKEN CHAOS" (legacy working title). Replaced with "CHASE THE ORANGE MENACE". First thing players see.
+- **`src/render/menu.js:305`** — footer stamp was "v0.1 dev". Bumped to "v1.0" to reflect v1 content-complete status.
+- **Pages URL case**. GitHub Pages URLs preserve repo name casing; actual repo is `Trumplestiltskin` (capital T). Fixed in `README.md`, `docs/PUBLISHING.md`, and this file — lowercase would 404.
+- **`CLAUDE.md` "Current branch"** updated from `claude/comedy-payload` → `claude/publishing-guide-bZm18`.
+- **`index.html`** — added `meta description`, `og:title`, `og:description`, `og:type` tags. Helps with social/itch sharing previews. No favicon yet.
+- **`docs/PLAN.md:5`** — M0 "in progress" → "shipped", all boxes checked. Line 290 "Title on screen" design question resolved with the actual final copy.
+- **`docs/ARCHITECTURE.md:190`** — save schema block was badly stale. Fixed the localStorage key (was `trumplestiltskin`, actually `chump_chicken_chase_v1`) and the schema fields (added `totalPlays`, `gameComplete`, `clears`, `ordersSeen`, nested `settings`; removed phantom `seed` and `audioMuted`).
+- **`docs/ARCHITECTURE.md:209`** — replaced the "Headless sim harness (`tools/sim.js`)" section with a Tooling section describing the actual `tools/smoke.mjs` and `tools/build.mjs`. There is no `tools/sim.js` and there never was; the AI lives in `src/entities/chicken.js`, not a `src/systems/ai.js`.
+
+Explicitly **not fixed** (acceptable by design):
+
+- `src/main.js:270` `console.warn('loadWorld: unknown world', num)` — unreachable guard, safe to ship.
+- A few dead exports (`CHICKEN_NAME`, `createFarm`/`createFarmBuildings`/`createFarmTownies` legacy aliases, `EXEC_ORDER_INFO`) — internal/legacy, harmless.
+- `docs/ARCHITECTURE.md` chicken-AI priority table is still pre-M14 (doesn't mention Executive Orders, fox minions, Tropical ice, supersonic slow). Informational only, not shipping-blocking.
+
+### Audit scope verified clean
+
+Parallel subagent sweeps confirmed:
+
+- **92 imports** across all 33 modules — zero case mismatches (important: Pages runs on Linux).
+- **33 modules** reachable from `src/main.js` — no dead files.
+- Zero `TODO`/`FIXME`/`XXX`/`HACK`/`WIP`/`STUB` markers anywhere in `src/` or `tools/`.
+- Zero `export default` / `export *` / dynamic `import()` (the regex bundler would silently break on these).
+- `dist/index.html` grep for `^(import |export )` → zero matches; bundle is hermetic.
+- Save schema nested merge in `src/systems/save.js` covers every `DEFAULT_SAVE` field.
+- No absolute paths or hardcoded dev URLs.
+
+### Smoke + build (post-audit)
+
+- `node tools/smoke.mjs` → OK (all 5 worlds, save roundtrip, cheats)
+- `node tools/build.mjs` → `dist/index.html` at 265.2 KB, parses clean
 
 ### Risks worth flagging
 
-- **Case sensitivity.** Local dev (macOS) is case-insensitive; Pages runs on Linux. If any `src/` import uses wrong casing, it'll 404 on the live URL only. Flagged in the publishing doc — check DevTools console on first deploy.
-- **The predicted GitHub Pages URL** in README.md assumes `tamryn72/trumplestiltskin` stays the repo slug. If the repo ever gets renamed or transferred, update the README link.
-- **itch.io page not created yet.** Path B is documented but nothing is live there. Cover image + description copy are the biggest remaining pieces of work when the user is ready.
+- **itch.io page not created yet.** Path B is documented but nothing is live there. Cover image + description copy are the biggest remaining pieces of work when the user is ready. Screenshot of the title screen (now with the fixed subtitle) would make a great cover.
+- **No favicon.** `index.html` has no `<link rel="icon">`. Not a blocker but will show the default browser globe in the tab. Easy add later — inline SVG or base64-encoded emoji work fine.
+- **Volume balance still ear-test-dependent** (inherited from M13/M14). First browser playtest should confirm nothing clips under chaos.
+- **Mobile touch hit-tests** still haven't run on a real phone.
 
 ---
 

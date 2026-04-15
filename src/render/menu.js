@@ -160,7 +160,7 @@ export function drawMenu(ctx, game, save) {
     ctx.textAlign = 'center';
     ctx.fillStyle = P.yellow;
     ctx.font = 'bold 11px ui-monospace, monospace';
-    ctx.fillText('ORANGE CHICKEN CHAOS', CANVAS_W / 2, 70);
+    ctx.fillText('CHASE THE ORANGE MENACE', CANVAS_W / 2, 70);
     ctx.restore();
   }
 
@@ -302,7 +302,7 @@ function drawMenuFooter(ctx, game, save, it) {
   ctx.fillStyle = P.darkGrey;
   ctx.fillText('chump chicken chase', 6, CANVAS_H - 6);
   ctx.textAlign = 'right';
-  ctx.fillText('v0.1 dev', CANVAS_W - 6, CANVAS_H - 6);
+  ctx.fillText('v1.0', CANVAS_W - 6, CANVAS_H - 6);
 }
 
 // --- State transition flash + banner ---

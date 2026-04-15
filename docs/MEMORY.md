@@ -46,16 +46,18 @@ Player's counterpart to Chump's burger buff. Adds a race/defense layer to every 
 - No gameplay interaction with player — pure vibe
 - 2-3 NPC archetypes per world (minimum), varied palettes
 
-## Architecture (current direction)
+## Architecture (settled)
 
-- **Modules during dev**: native ES modules in `src/` for iteration sanity. How we ship (single HTML file vs served folder vs bundled) is still being discussed — see `PLAN.md` → "Design calls worth talking through."
-- **Rendering**: single `<canvas>`, 2D context. Logical resolution leaning 640×480; exact grid is in play.
-- **Tick rate**: leaning fixed 10Hz logic + RAF render with interpolation. Real-time (no ticks, seconds everywhere) is a viable alternative.
-- **RNG**: seeded `mulberry32`. Useful for reproducing AI bugs and optional daily-seed mode. Fine to drop if it becomes friction.
-- **State machine**: top-level `BOOT, MENU, PLAN, CHASE, CUTSCENE, VICTORY, GAMEOVER`.
-- **Art source**: under discussion — leaning hybrid (emoji + simple procedural tiles). Full-emoji and full-procedural are both on the table. See `PLAN.md` → "Art approach."
-- **External deps**: none currently planned; fine to add if one earns its weight.
-- **External assets**: aiming self-contained so nothing breaks on share. Emoji from the system font counts as "built-in."
+All locked. Full system map in `docs/ARCHITECTURE.md`.
+
+- **Modules**: 33 native ES modules in `src/`. Ships two ways — served from repo root for GitHub Pages, or bundled to a single `dist/index.html` via `tools/build.mjs` for itch.io.
+- **Rendering**: single `<canvas>`, 2D context, 640×480 logical (20×15 × 32px). Static viewport, no scrolling.
+- **Tick rate**: fixed 10Hz logic + RAF render with pixel interpolation. Every duration in the codebase is in ticks.
+- **RNG**: seeded `mulberry32` in `src/rng.js`. All randomness routes through it.
+- **State machine**: `MENU → PLAN → CHASE → GOTCHA → SIGNING → CHASE` for the first catch of each level; subsequent catches skip SIGNING; `CHASE → ESCAPE_CUTSCENE → SCORE → MENU` for W1-W4 final catches; `CHASE → SCORE` on loss. Pause is an overlay, not a separate state.
+- **Art**: hybrid — procedural pixel-art sprites baked once at boot to OffscreenCanvas via `render/bake.js`, plus emoji + procedural particles for chaos effects.
+- **External deps**: none.
+- **External assets**: none. Sprites, tiles, sounds, animations all procedural.
 
 ## Game rules (from the README design brief)
 
@@ -113,11 +115,8 @@ These are design calls baked into the feel of the game. Not untouchable, but eac
 
 ## Things actively worth revisiting
 
-All of these have open discussion in `docs/PLAN.md`:
+The "Design calls worth talking through" list in earlier sessions is all resolved (see `docs/PLAN.md` → "Resolved design calls"). Nothing on the original open-questions list is still open. Only items currently worth a future session:
 
-- Art approach (full emoji / procedural pixel art / hybrid)
-- Distribution shape (single HTML / served folder / dev-as-modules-ship-as-single)
-- Logic tick rate (10Hz grid / continuous real-time)
-- Scope tiers (vibe demo / Farm MVP / full 5-world game)
-- Sound scope (from M1 / from M6 / M13 / skip)
-- Cutscene style, catch mechanic, mobile timing, difficulty curve
+- **Arctic / ice level variant** — still parked. Could be W6 or a W5 sub-biome. No design pressure to ship.
+- **Volume balance** — first real-browser playtest after publishing should confirm peaks don't clip under W5 chaos. The audio pass was tuned without ears.
+- **Mobile touch hit-tests** — written but not yet run on a real phone. First playtest on a device will tell us if the d-pad/palette geometry is right.

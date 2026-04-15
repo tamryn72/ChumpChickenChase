@@ -15,18 +15,18 @@ Reference as needed:
 - `docs/ARCHITECTURE.md` — systems, data flow, file layout
 - `docs/TIMELINE.md` — chronological log of what has shipped
 
-## Project shape (current direction)
+## Project shape
 
-Most of this is still open for discussion — `docs/PLAN.md` tracks what's settled vs. still in the air.
+Settled, post-M14. Game is v1 content-complete.
 
-- **Stack**: HTML5 Canvas 2D, vanilla JS. Likely native ES modules for dev, possibly bundled to a single HTML for distribution — TBD.
+- **Stack**: HTML5 Canvas 2D, vanilla JS, native ES modules for dev. Bundled to a single `dist/index.html` via `tools/build.mjs` for itch.io. GitHub Pages serves the repo root directly (no build step).
 - **Entry**: `index.html` → `src/main.js`
-- **Target**: modern desktop + mobile browsers
-- **Logic / render**: leaning fixed 10Hz logic tick + RAF render with interpolation, but real-time is a viable alternative
-- **Grid**: leaning 20×15 tiles at 32px (640×480 logical), open to change
-- **RNG**: seeded `mulberry32` in `src/rng.js` so bugs can be reproduced and AI can be sim-tested
-- **Art**: leaning hybrid (emoji for effects/pickups/particles, simple procedural tiles for terrain/characters) — this is the biggest open question, see `PLAN.md`
-- **Assets**: aiming for self-contained — user provides nothing, everything comes from code or system fonts
+- **Target**: modern desktop + mobile browsers (touch d-pad + virtual buttons wired in M13)
+- **Logic / render**: fixed 10Hz logic tick + RAF render with pixel interpolation
+- **Grid**: 20×15 tiles × 32px = 640×480 logical canvas
+- **RNG**: seeded `mulberry32` in `src/rng.js`
+- **Art**: hybrid — procedural pixel-art sprites baked once at boot via `render/bake.js`, plus emoji/procedural particles for chaos effects
+- **Assets**: fully self-contained. No images, no audio files, no fonts beyond system. Everything procedural.
 
 ## How to run
 
@@ -36,17 +36,18 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Add `?debug=1` to the URL for dev overlays (grid, AI state, rage meter, pathfind viz, seed display).
+Add `?debug=1` to the URL for a small top-left info overlay (tick, state, world, player/chump coords, rage, finalForm, buffs, entity counts). It's just a readout — no hotkeys.
 
 ## How to test
 
-- **Manual**: playtest in browser; use `?debug=1` for overlays
-- **Headless AI sim** (planned, `tools/sim.js`): `node tools/sim.js --seed=42 --ticks=600` for deterministic AI regression
-- **Lint/type**: none yet
+- **Manual**: playtest in browser; use `?debug=1` for the info overlay
+- **Headless smoke**: `node tools/smoke.mjs` — stubs the browser globals and runs the full sim across all 5 worlds, exercising catches, traps, cheats, and the save roundtrip
+- **Single-file build**: `node tools/build.mjs` — emits `dist/index.html` for itch.io. See `docs/PUBLISHING.md`.
+- **Lint/type**: none
 
 ## Current branch
 
-`claude/comedy-payload`
+`claude/publishing-guide-bZm18`
 
 ## Code conventions (current)
 
