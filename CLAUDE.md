@@ -46,7 +46,7 @@ Add `?debug=1` to the URL for dev overlays (grid, AI state, rage meter, pathfind
 
 ## Current branch
 
-`claude/game-docs-setup-mkNDN`
+`claude/m13-polish-ship-2fGFd`
 
 ## Code conventions (current)
 

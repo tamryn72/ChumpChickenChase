@@ -5,6 +5,53 @@ import * as cache from './sprite-cache.js';
 import { P } from './palette.js';
 import { WORLD_ORDER } from '../world/index.js';
 
+// Layout constants shared with touch hit-testing in main.js
+const WORLD_LIST_X = 340;
+const WORLD_LIST_Y = 100;
+const WORLD_ROW_H  = 19;
+const SETTINGS_ROW_H = 15;
+const NUM_SETTINGS = 4;
+
+// Computed layout for the title screen. Used by both the renderer and
+// main.js's touch hit-testing. Rects are in canvas coordinates.
+export function menuLayout() {
+  const worlds = [];
+  for (let i = 0; i < WORLD_ORDER.length; i++) {
+    const y = WORLD_LIST_Y + i * WORLD_ROW_H;
+    worlds.push({
+      x: WORLD_LIST_X - 10,
+      y: y - 12,
+      w: 260,
+      h: WORLD_ROW_H,
+    });
+  }
+  const settingsY0 = WORLD_LIST_Y + WORLD_ORDER.length * WORLD_ROW_H + 16;
+  const settings = [];
+  for (let i = 0; i < NUM_SETTINGS; i++) {
+    const y = settingsY0 + i * SETTINGS_ROW_H;
+    settings.push({
+      x: WORLD_LIST_X - 10,
+      y: y - 11,
+      w: 260,
+      h: SETTINGS_ROW_H,
+    });
+  }
+  return { worlds, settings };
+}
+
+// Layout of the pause menu rows — used for touch hit-testing.
+// startY / rowH must match drawPause.
+const PAUSE_START_Y = 150;
+const PAUSE_ROW_H   = 28;
+const PAUSE_ROWS    = 6;
+export function pauseMenuLayout() {
+  const rows = [];
+  for (let i = 0; i < PAUSE_ROWS; i++) {
+    rows.push({ y: PAUSE_START_Y + i * PAUSE_ROW_H });
+  }
+  return { rows, pickH: PAUSE_ROW_H };
+}
+
 // --- Title + world-select screen ---
 // Menu layout:
 //   big chump sprite, title, subtitle
@@ -14,12 +61,26 @@ import { WORLD_ORDER } from '../world/index.js';
 // game.menuIndex is the currently highlighted world row (zero-based in
 // WORLD_ORDER).
 
+// Intro staging timers (tick indices within menuIntroT).
+// All times are in logic ticks (10Hz), so an 8-tick stage is 0.8s.
+const INTRO_TITLE_START    = 0;   const INTRO_TITLE_LEN    = 10;
+const INTRO_SUB_START      = 8;   const INTRO_SUB_LEN      = 10;
+const INTRO_CHUMP_START    = 14;  const INTRO_CHUMP_LEN    = 20;
+const INTRO_LIST_START     = 30;  const INTRO_LIST_LEN     = 16;
+const INTRO_SETTINGS_START = 38;  const INTRO_SETTINGS_LEN = 14;
+
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+function stage(t, start, len) { return clamp01((t - start) / len); }
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
 export function drawMenu(ctx, game, save) {
+  const it = game.menuIntroT ?? 999;
+
   // background
   ctx.fillStyle = '#1a1208';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // faint stars
+  // faint stars — always on
   ctx.fillStyle = P.white;
   const starSeeds = [[30, 40], [80, 60], [140, 30], [210, 55], [270, 45],
                      [340, 70], [420, 35], [490, 60], [560, 40], [610, 75]];
@@ -34,32 +95,85 @@ export function drawMenu(ctx, game, save) {
   ctx.fillStyle = '#2a1a0a';
   ctx.fillRect(0, CANVAS_H - 60, CANVAS_W, 60);
 
-  // chump sprite (smaller now, on the left; world list takes the right)
-  const bounceY = Math.sin(game.tick * 0.12) * 4;
-  const frame = Math.floor(game.tick / 6) % 2;
-  ctx.save();
-  ctx.translate(140, CANVAS_H / 2 + 30 + bounceY);
-  ctx.scale(3.5, 3.5);
-  cache.draw(ctx, `chump_down_${frame}`, -12, -12);
-  ctx.restore();
+  // --- chump sprite: stomps in from off-screen right, then idles ---
+  const chumpStage = easeOut(stage(it, INTRO_CHUMP_START, INTRO_CHUMP_LEN));
+  const steadyX = 140;
+  const chumpX  = chumpStage < 1
+    ? CANVAS_W + 100 - (CANVAS_W + 100 - steadyX) * chumpStage
+    : steadyX;
+  // stomp bob: big steps during the walk-in, idle bob once steady
+  let bounceY;
+  if (chumpStage < 1) {
+    // each step ~4 ticks; bounce peaks at each
+    const walkPhase = (it - INTRO_CHUMP_START) * 0.8;
+    bounceY = -Math.abs(Math.sin(walkPhase)) * 6;
+  } else {
+    bounceY = Math.sin(game.tick * 0.12) * 4;
+  }
+  // frame 0/1 cycles faster during stomp-in
+  const frame = chumpStage < 1
+    ? (Math.floor((it - INTRO_CHUMP_START) * 0.6) % 2)
+    : (Math.floor(game.tick / 6) % 2);
+  // face direction: left while stomping in, down once idle
+  const chumpKey = chumpStage < 1 ? `chump_left_${frame}` : `chump_down_${frame}`;
+  if (chumpStage > 0) {
+    ctx.save();
+    ctx.translate(chumpX, CANVAS_H / 2 + 30 + bounceY);
+    ctx.scale(3.5, 3.5);
+    cache.draw(ctx, chumpKey, -12, -12);
+    ctx.restore();
+    // dust puffs under each step during the walk-in
+    if (chumpStage < 1 && Math.floor((it - INTRO_CHUMP_START)) % 2 === 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#5a4020';
+      ctx.beginPath();
+      ctx.arc(chumpX + 30, CANVAS_H / 2 + 70, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(chumpX + 45, CANVAS_H / 2 + 72, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 
-  // title
-  ctx.textAlign = 'center';
-  ctx.font = 'bold 30px ui-monospace, monospace';
-  ctx.fillStyle = P.black;
-  ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2 + 3, 50 + 3);
-  ctx.fillStyle = P.chumpOrange;
-  ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2, 50);
+  // --- title: drops in with overshoot bounce ---
+  const titleStage = easeOut(stage(it, INTRO_TITLE_START, INTRO_TITLE_LEN));
+  if (titleStage > 0) {
+    const titleY = -30 + (50 + 30) * titleStage;
+    ctx.save();
+    ctx.globalAlpha = titleStage;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 30px ui-monospace, monospace';
+    ctx.fillStyle = P.black;
+    ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2 + 3, titleY + 3);
+    ctx.fillStyle = P.chumpOrange;
+    ctx.fillText(TITLE.toUpperCase(), CANVAS_W / 2, titleY);
+    ctx.restore();
+  }
 
-  // subtitle
-  ctx.fillStyle = P.yellow;
-  ctx.font = 'bold 11px ui-monospace, monospace';
-  ctx.fillText('ORANGE CHICKEN CHAOS', CANVAS_W / 2, 70);
+  // --- subtitle: fades in ---
+  const subStage = stage(it, INTRO_SUB_START, INTRO_SUB_LEN);
+  if (subStage > 0) {
+    ctx.save();
+    ctx.globalAlpha = subStage;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = P.yellow;
+    ctx.font = 'bold 11px ui-monospace, monospace';
+    ctx.fillText('ORANGE CHICKEN CHAOS', CANVAS_W / 2, 70);
+    ctx.restore();
+  }
 
   // --- world list (right side, compact) ---
-  const listX = 340;
-  const listY = 100;
-  const rowH = 19;
+  const listStage = stage(it, INTRO_LIST_START, INTRO_LIST_LEN);
+  if (listStage <= 0) return; // list hasn't started fading in yet
+  ctx.save();
+  ctx.globalAlpha = listStage;
+  const listSlideX = (1 - listStage) * 40;
+  ctx.translate(listSlideX, 0);
+  const listX = WORLD_LIST_X;
+  const listY = WORLD_LIST_Y;
+  const rowH = WORLD_ROW_H;
 
   const worldsFocused = game.menuColumn !== 'settings';
 
@@ -104,7 +218,15 @@ export function drawMenu(ctx, game, save) {
     }
   }
 
+  ctx.restore();
+
   // --- settings panel (right side, below worlds) ---
+  const settingsStage = stage(it, INTRO_SETTINGS_START, INTRO_SETTINGS_LEN);
+  if (settingsStage <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = settingsStage;
+  const setSlideX = (1 - settingsStage) * 40;
+  ctx.translate(setSlideX, 0);
   const setX = listX;
   const setY = listY + WORLD_ORDER.length * rowH + 16;
   const settingsFocused = game.menuColumn === 'settings';
@@ -116,14 +238,14 @@ export function drawMenu(ctx, game, save) {
 
   const rows = [
     { key: 'muted',         label: 'SOUND',          onText: 'MUTED',  offText: 'ON' },
+    { key: 'volume',        label: 'VOLUME' },
     { key: 'reducedMotion', label: 'REDUCED MOTION', onText: 'ON',     offText: 'OFF' },
     { key: 'highContrast',  label: 'HIGH CONTRAST',  onText: 'ON',     offText: 'OFF' },
   ];
-  const srH = 15;
+  const srH = SETTINGS_ROW_H;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const y = setY + i * srH;
-    const value = save.settings?.[row.key] === true;
     const highlighted = settingsFocused && i === game.menuSettingIndex;
     if (highlighted) {
       ctx.fillStyle = 'rgba(41,173,255,0.22)';
@@ -134,17 +256,29 @@ export function drawMenu(ctx, game, save) {
     ctx.font = 'bold 10px ui-monospace, monospace';
     ctx.fillStyle = settingsFocused ? (highlighted ? P.white : P.lightGrey) : P.darkGrey;
     ctx.fillText(row.label, setX, y);
-    // value pill on the right
-    const pillText = value
-      ? (row.key === 'muted' ? row.onText : row.onText)
-      : (row.key === 'muted' ? row.offText : row.offText);
-    const showAsOn = row.key === 'muted' ? !value : value;
-    ctx.fillStyle = showAsOn ? P.green : P.darkGrey;
+    // right-aligned value pill
     ctx.textAlign = 'right';
-    ctx.fillText(pillText, setX + 230, y);
+    if (row.key === 'volume') {
+      const v = save.settings?.volume ?? 1;
+      const pct = Math.round(v * 100) + '%';
+      ctx.fillStyle = v > 0 ? P.green : P.darkGrey;
+      ctx.fillText(pct, setX + 230, y);
+    } else {
+      const value = save.settings?.[row.key] === true;
+      const pillText = value ? row.onText : row.offText;
+      const showAsOn = row.key === 'muted' ? !value : value;
+      ctx.fillStyle = showAsOn ? P.green : P.darkGrey;
+      ctx.fillText(pillText, setX + 230, y);
+    }
     ctx.textAlign = 'left';
   }
+  ctx.restore();
 
+  drawMenuFooter(ctx, game, save, it);
+}
+
+function drawMenuFooter(ctx, game, save, it) {
+  const settingsFocused = game.menuColumn === 'settings';
   // --- controls hint ---
   ctx.fillStyle = P.lightGrey;
   ctx.font = '10px ui-monospace, monospace';
@@ -171,6 +305,71 @@ export function drawMenu(ctx, game, save) {
   ctx.fillText('v0.1 dev', CANVAS_W - 6, CANVAS_H - 6);
 }
 
+// --- State transition flash + banner ---
+//
+// Played every time setState() bumps game.transitionT. A full-screen orange
+// flash fades out while a big bold label slides in from the right. Only
+// state changes worth narrating get a label — for the rest, just the flash.
+
+const TRANSITION_MAX = 14; // must match main.js TRANSITION_LEN
+
+function transitionLabel(state) {
+  if (state === 'PLAN')           return 'PLAN';
+  if (state === 'CHASE')          return 'CHASE!';
+  if (state === 'ESCAPE_CUTSCENE') return 'HE ESCAPED';
+  return null;
+}
+
+export function drawTransition(ctx, game) {
+  const t = game.transitionT || 0;
+  if (t <= 0) return;
+  const frac = t / TRANSITION_MAX;            // 1 at start → 0 at end
+  const fadeOut = Math.pow(frac, 1.4);
+
+  // chunky diagonal orange wipe across the canvas
+  ctx.save();
+  ctx.globalAlpha = fadeOut * 0.72;
+  ctx.fillStyle = P.chumpOrange;
+  const cover = 1 - frac;                     // 0 → 1 over the duration
+  const barX  = -120 + cover * (CANVAS_W + 240);
+  ctx.beginPath();
+  ctx.moveTo(barX,            0);
+  ctx.lineTo(barX + 180,      0);
+  ctx.lineTo(barX + 180 - 80, CANVAS_H);
+  ctx.lineTo(barX - 80,       CANVAS_H);
+  ctx.closePath();
+  ctx.fill();
+  // dark leading edge
+  ctx.globalAlpha = fadeOut * 0.9;
+  ctx.fillStyle = P.chumpDeep;
+  ctx.beginPath();
+  ctx.moveTo(barX + 170,      0);
+  ctx.lineTo(barX + 180,      0);
+  ctx.lineTo(barX + 180 - 80, CANVAS_H);
+  ctx.lineTo(barX + 170 - 80, CANVAS_H);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // banner label (slides in from right with a slight overshoot)
+  const label = transitionLabel(game.state);
+  if (label) {
+    ctx.save();
+    const labelT = 1 - frac;
+    const easeT = 1 - Math.pow(1 - Math.min(1, labelT * 1.4), 3);
+    const bx = CANVAS_W / 2 + (1 - easeT) * 220;
+    ctx.globalAlpha = fadeOut;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 42px ui-monospace, monospace';
+    ctx.fillStyle = P.black;
+    ctx.fillText(label, bx + 4, CANVAS_H / 2 + 4);
+    ctx.fillStyle = P.white;
+    ctx.fillText(label, bx, CANVAS_H / 2);
+    ctx.restore();
+  }
+}
+
 // --- In-chase pause overlay ---
 
 export function drawPause(ctx, game) {
@@ -191,13 +390,14 @@ export function drawPause(ctx, game) {
   const rows = [
     { label: 'RESUME' },
     { label: 'SOUND',          settingKey: 'muted',         invert: true  },
+    { label: 'VOLUME',         settingKey: 'volume' },
     { label: 'REDUCED MOTION', settingKey: 'reducedMotion', invert: false },
     { label: 'HIGH CONTRAST',  settingKey: 'highContrast',  invert: false },
     { label: 'QUIT TO MENU' },
   ];
 
-  const startY = 170;
-  const rowH = 32;
+  const startY = PAUSE_START_Y;
+  const rowH = PAUSE_ROW_H;
   ctx.textAlign = 'left';
   const cx = CANVAS_W / 2;
   for (let i = 0; i < rows.length; i++) {
@@ -214,11 +414,17 @@ export function drawPause(ctx, game) {
     ctx.fillStyle = highlighted ? P.white : P.lightGrey;
     ctx.fillText(r.label, cx - 130, y);
     if (r.settingKey) {
-      const raw = game.save.settings?.[r.settingKey] === true;
-      const isOn = r.invert ? !raw : raw;
       ctx.textAlign = 'right';
-      ctx.fillStyle = isOn ? P.green : P.darkGrey;
-      ctx.fillText(isOn ? 'ON' : 'OFF', cx + 130, y);
+      if (r.settingKey === 'volume') {
+        const v = game.save.settings?.volume ?? 1;
+        ctx.fillStyle = v > 0 ? P.green : P.darkGrey;
+        ctx.fillText(Math.round(v * 100) + '%', cx + 130, y);
+      } else {
+        const raw = game.save.settings?.[r.settingKey] === true;
+        const isOn = r.invert ? !raw : raw;
+        ctx.fillStyle = isOn ? P.green : P.darkGrey;
+        ctx.fillText(isOn ? 'ON' : 'OFF', cx + 130, y);
+      }
       ctx.textAlign = 'left';
     }
   }

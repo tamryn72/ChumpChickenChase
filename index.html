@@ -27,6 +27,10 @@
       aspect-ratio: 4 / 3;
       background: #111;
       display: block;
+      touch-action: none;          /* kill pinch/scroll — we drive touch ourselves */
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
     }
   </style>
 </head>

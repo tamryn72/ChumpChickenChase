@@ -119,17 +119,20 @@ Goal: load Farm tilemap, move player around, see something on a real canvas.
 - [x] Final catch → `VOLCANO_VICTORY` cutscene (player hoists chump, confetti)
 - [x] Final **GAME COMPLETE** score screen + R to PLAY AGAIN
 
-## M13 — Polish pass  *(in progress)*
+## M13 — Polish pass  *(shipped)*
 
-- [ ] Mobile touch d-pad + trap palette  *(stretch — not shipped)*
+- [x] Mobile touch d-pad + trap palette  *(virtual d-pad + pause + GO + tappable trap strip; touch-action:none on canvas; all menus tap-routed)*
 - [x] Sound — `src/audio/sfx.js` procedural Web Audio, lazy-inited on first gesture
-- [x] Settings (mute / reduced motion / high contrast) persisted to localStorage
+- [x] Audio pass 2 — peaks normalized across effects, master volume slider in settings (0..125%), two new effects (`spit_fire`, `cook_scream`)
+- [x] Settings (mute / volume / reduced motion / high contrast) persisted to localStorage
 - [x] Menu settings panel + in-chase pause overlay with the same toggles
 - [x] Accessibility: reduced-motion clamps particle counts + kills screen shake, high-contrast overlay adds vignette + border
 - [x] Headless regression harness  *(`tools/smoke.mjs` covers this; no separate sim.js)*
-- [x] Dist build: `tools/build.mjs` emits a single `dist/index.html` (~214 KB, no external deps)
-- [ ] Menu juice, transitions, intro screen  *(partial — title still plain fade)*
-- [ ] Performance audit  *(deferred — nothing currently feels slow)*
+- [x] Dist build: `tools/build.mjs` emits a single `dist/index.html` (~242 KB, no external deps)
+- [x] Menu juice, transitions, intro screen  *(staged title intro: title drops in, subtitle fades, Chump stomps in from off-screen right with dust puffs, list+settings slide in; diagonal orange wipe + banner on every state change via setState())*
+- [x] Spit-fire animation  *(new directional flame cone replaces egg-splat placeholder when Chump eats a taco)*
+- [x] Cook NPC  *(chef-hat sprite at the taco truck window on the Farm; flails and screams when Chump approaches)*
+- [ ] Performance audit  *(still deferred — nothing currently feels slow)*
 
 ---
 
@@ -183,12 +186,12 @@ Chump into (or he baits townspeople into). Details TBD.
 
 ### Other parked ideas
 
-- **Spit-fire animation** when Chump eats a taco (currently uses a placeholder
-  egg-splat). Proper orange/red flame particle burst + screen flash.
-- **Cook NPC** standing at the taco truck window. Currently the truck is
-  just the building — no visible cook.
-- **Spoken taunt experiment** using `SpeechSynthesis` API. Low-effort test,
-  ship if it's funny, rip out if it's grating.
+- ~~**Spit-fire animation** when Chump eats a taco~~ *(shipped in M13 ship pass — `addSpitFire` fires a directional flame cone in Chump's facing direction)*
+- ~~**Cook NPC** standing at the taco truck window~~ *(shipped in M13 ship pass — chef-hat townie variant at the Farm taco truck, flails + screams when Chump gets close)*
+- **Spoken taunt experiment** using `SpeechSynthesis` API. Dropped for v1
+  — text-only taunts are the direction for now. Can revisit if/when we
+  want voice. Tech note: the API can only tune pitch/rate on system
+  voices, so it wouldn't produce a real impression anyway.
 
 ---
 

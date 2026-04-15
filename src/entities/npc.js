@@ -34,6 +34,16 @@ export function tickTownie(n, level, rng, chump) {
     n.state = 'wander';
   }
 
+  // Cook NPCs are rooted to the taco truck window — they never move, just
+  // switch between idle and panic. Still animate for a little flail.
+  if (n.variant === 'cook') {
+    if (n.moveT < MOVE_TICKS) n.moveT += 1;
+    if (n.state === 'panic' && rng.chance(0.35)) {
+      n.animFrame = 1 - n.animFrame;
+    }
+    return;
+  }
+
   // advance interpolation
   const pace = n.state === 'panic' ? 2 : MOVE_TICKS;
   if (n.moveT < pace) n.moveT += 1;

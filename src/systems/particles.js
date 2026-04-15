@@ -124,6 +124,53 @@ export function addEggSplat(particles, col, row, rng) {
   }
 }
 
+// Directional flame cone — Chump spits fire in a direction after eating a
+// taco. dirX/dirY are a unit vector (from player.js FACE: 0=up, 1=right,
+// 2=down, 3=left). Particles shoot along that axis with spread.
+const FIRE_DIR = [
+  { dx:  0, dy: -1 }, // UP
+  { dx:  1, dy:  0 }, // RIGHT
+  { dx:  0, dy:  1 }, // DOWN
+  { dx: -1, dy:  0 }, // LEFT
+];
+export function addSpitFire(particles, col, row, facing, rng) {
+  const dir = FIRE_DIR[facing] || FIRE_DIR[2];
+  const cx = col * TILE + TILE / 2 + dir.dx * 6;
+  const cy = row * TILE + TILE / 2 + dir.dy * 6;
+  const n = scaled(22);
+  for (let i = 0; i < n; i++) {
+    const speed = 1.8 + rng.next() * 2.6;
+    // spread: perpendicular jitter
+    const perpX = -dir.dy;
+    const perpY =  dir.dx;
+    const jitter = (rng.next() - 0.5) * 1.8;
+    particles.feathers.push({
+      kind: 'fire',
+      x: cx + rng.int(-2, 2),
+      y: cy + rng.int(-2, 2),
+      vx: dir.dx * speed + perpX * jitter,
+      vy: dir.dy * speed + perpY * jitter - 0.2,
+      life: 14 + rng.int(0, 10),
+      drag: 0.90,
+      gravity: -0.04,
+    });
+  }
+  // a few lingering smoke puffs for weight
+  const smokeN = scaled(5);
+  for (let i = 0; i < smokeN; i++) {
+    particles.feathers.push({
+      kind: 'smoke',
+      x: cx + rng.int(-4, 4),
+      y: cy + rng.int(-4, 4),
+      vx: dir.dx * 0.6 + (rng.next() - 0.5) * 0.8,
+      vy: dir.dy * 0.6 - rng.next() * 0.6 - 0.2,
+      life: 30 + rng.int(0, 20),
+      drag: 0.94,
+      gravity: -0.02,
+    });
+  }
+}
+
 export function drawGoo(ctx, particles) {
   ctx.fillStyle = P.chumpOrange;
   for (let r = 0; r < particles.h; r++) {
@@ -170,6 +217,25 @@ export function drawFeathers(ctx, particles) {
       ctx.fillRect(px - 1, py - 1, 2, 2);
       ctx.fillStyle = P.white;
       ctx.fillRect(px, py, 1, 1);
+    } else if (f.kind === 'fire') {
+      // flame: yellow core → orange shell → red outer as the particle ages
+      const t = f.life / 24;
+      ctx.globalAlpha = Math.min(1, t);
+      if (t > 0.66) {
+        ctx.fillStyle = P.yellow;
+        ctx.fillRect(px - 1, py - 1, 3, 3);
+        ctx.fillStyle = P.white;
+        ctx.fillRect(px, py, 1, 1);
+      } else if (t > 0.33) {
+        ctx.fillStyle = P.chumpOrange;
+        ctx.fillRect(px - 1, py - 1, 3, 3);
+        ctx.fillStyle = P.yellow;
+        ctx.fillRect(px, py, 1, 1);
+      } else {
+        ctx.fillStyle = P.red;
+        ctx.fillRect(px - 1, py, 2, 1);
+        ctx.fillRect(px, py - 1, 1, 2);
+      }
     } else {
       ctx.globalAlpha = Math.min(1, f.life / 22);
       ctx.fillStyle = P.white;

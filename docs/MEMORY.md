@@ -15,7 +15,10 @@ Things that landed firmly — not locked forever, but these are our real directi
 - **Grid**: 20×15 tiles × 32px = 640×480 logical canvas. Current working size.
 - **Entry point scaffolded**: `index.html` + `src/{config,rng,main}.js` render the title screen and tick counter. Verified boot-ready.
 - **All 5 worlds shipped**. M12 closed out The Volcano: all four cheats active (dodge/teleport/swim/clone, with SWIM now covering lava too), falling rocks from the peak, flaming eggs, `VOLCANO_VICTORY` cutscene, and a final **GAME COMPLETE** score screen with R-to-replay. `save.gameComplete` flag exists now.
-- **M13 polish pass**. Procedural Web Audio SFX (`src/audio/sfx.js`), settings persisted to save (`muted`, `reducedMotion`, `highContrast`), menu settings column, in-chase pause overlay (ESC/P), and a dependency-free `tools/build.mjs` that emits a single-file `dist/index.html` (~214 KB). Global M mutes at any time. Reduced-motion kills screen shake and clamps particle counts via `addShake` + `setMotionScale`. High contrast draws a post-render border + vignette. Mobile touch is the one M13 item still parked.
+- **M13 shipped**. Two passes.
+  - *Polish pass (2026-04-14)*: procedural Web Audio SFX (`src/audio/sfx.js`), settings persisted to save, menu settings column, in-chase pause overlay (ESC/P), `tools/build.mjs` single-file bundler, reduced-motion + high-contrast. Details in `docs/TIMELINE.md`.
+  - *Ship pass (2026-04-15)*: mobile touch (virtual d-pad, pause button, GO button, tappable trap palette strip — all menus tap-routed); title intro animation (Chump stomps in from off-screen right); diagonal orange wipe + banner on every state change; audio pass 2 (peak normalization + master volume slider 0..125% in settings); directional spit-fire particle burst when Chump eats a taco; cook NPC at the taco truck window on the Farm (screams + flails when Chump approaches).
+- **Wishlist nearly empty**. After M13 ship pass the remaining parked items are Executive Clucks + Red Fox minions (scheduled for the next milestone as the comedy payload) and a potential arctic / ice level variant (still deferred).
 
 ## New mechanic: Tacos & the Mexican food truck
 
