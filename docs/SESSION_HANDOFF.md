@@ -4,7 +4,47 @@
 
 ---
 
-## Last session — 2026-04-15 (M14 comedy payload)
+## Last session — 2026-04-15 (publishing guide)
+
+Renamed the public-facing game to **Chump Chicken Chase** (project codename Trumplestiltskin stays as the repo name). Wrote `docs/PUBLISHING.md` covering GitHub Pages (path A, do first) and itch.io (path B, later). Branch `claude/publishing-guide-bZm18`.
+
+### What changed
+- `README.md` — top heading is now "Chump Chicken Chase", added a "Play it" link pointing to the expected GitHub Pages URL, dropped the "ORANGE CHICKEN CHAOS — Full Game Design" subheading in favor of just "Full Game Design"
+- `CLAUDE.md` — first-line description updated to "Chump Chicken Chase (project codename: Trumplestiltskin)"
+- `docs/PUBLISHING.md` *(new)* — complete two-path guide with playtest checklist
+
+### Key decision: GitHub Pages serves `main` from `/` (root), not from `/dist`
+
+GitHub Pages' branch-folder picker only allows `/` or `/docs`. The existing
+`index.html` + `src/` layout works as-is under Pages because it's already a
+valid static site — native ES modules load fine. **No bundling or
+`dist/` commit is needed for GitHub Pages.** The `tools/build.mjs` bundler is
+still needed for itch.io (which wants a self-contained zipped HTML file).
+
+As a result, `dist/` stays in `.gitignore`. Nothing committed there.
+
+### What the user needs to do next
+
+1. Merge `claude/publishing-guide-bZm18` → `main` and push
+2. Repo **Settings → Pages → Deploy from branch → main / (root) → Save**
+3. Wait for first deploy, visit `https://tamryn72.github.io/trumplestiltskin/`
+4. Playtest live — especially audio balance and mobile touch
+5. When ready for itch.io, follow Path B in `docs/PUBLISHING.md`
+
+### Smoke + build
+
+- `node tools/smoke.mjs` → OK
+- `node tools/build.mjs` → `dist/index.html` at 264.8 KB, parses clean
+
+### Risks worth flagging
+
+- **Case sensitivity.** Local dev (macOS) is case-insensitive; Pages runs on Linux. If any `src/` import uses wrong casing, it'll 404 on the live URL only. Flagged in the publishing doc — check DevTools console on first deploy.
+- **The predicted GitHub Pages URL** in README.md assumes `tamryn72/trumplestiltskin` stays the repo slug. If the repo ever gets renamed or transferred, update the README link.
+- **itch.io page not created yet.** Path B is documented but nothing is live there. Cover image + description copy are the biggest remaining pieces of work when the user is ready.
+
+---
+
+## Previous session — 2026-04-15 (M14 comedy payload)
 
 Executive Clucks + Red Fox minions shipped. This was the last wishlist milestone; the base game is effectively v1 content-complete. Branch `claude/comedy-payload`, based on `claude/m13-polish-ship-2fGFd`.
 

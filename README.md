@@ -1,10 +1,13 @@
-# Trumplestiltskin
-Chase a chaotic orange chicken around to save the town
+# Chump Chicken Chase
+Chase a chaotic orange chicken around to save the town.
 
+*(Project codename: Trumplestiltskin.)*
+
+**Play it:** open `index.html` via any static server, or [play it on GitHub Pages](https://tamryn72.github.io/trumplestiltskin/).
 
 ---
 
-## ORANGE CHICKEN CHAOS — Full Game Design
+## Full Game Design
 
 ### Core Concept
 A pixel-art browser game (HTML Canvas) with 5 worlds. Each level has a **PLAN phase** (place traps, set barriers) then a **CHASE phase** (real-time pursuit). The chicken is an unhinged orange menace who destroys everything, rage-baits you, cheats constantly, and always escapes until the final volcano level where you punt him into the crater.

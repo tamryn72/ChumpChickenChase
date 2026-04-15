@@ -1,6 +1,6 @@
 # Trumplestiltskin — Claude Project Memory
 
-> Orange Chicken Chaos: a chaotic browser game where you chase a bratty, rage-baiting orange chicken across 5 worlds to save the town. Two-phase levels (Plan → Chase). `README.md` is the original design brief — it's our compass, not our cage.
+> Chump Chicken Chase (project codename: Trumplestiltskin): a chaotic browser game where you chase a bratty, rage-baiting orange chicken across 5 worlds to save the town. Two-phase levels (Plan → Chase). `README.md` is the original design brief — it's our compass, not our cage.
 
 ## How to read these docs
 
