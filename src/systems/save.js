@@ -11,6 +11,7 @@ const DEFAULT_SAVE = {
   clears: 0,            // how many times W5 has been beaten
   settings: {
     muted:         false, // global SFX mute
+    volume:        1.0,   // 0..1.25, multiplies the base master gain
     reducedMotion: false, // kills screen shake, clamps particle counts
     highContrast:  false, // thicker sprite outlines + darker overlay
   },

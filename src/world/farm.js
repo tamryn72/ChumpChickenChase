@@ -95,6 +95,9 @@ export function createTownies() {
     { col: 3,  row: 11, variant: 0 },
     { col: 17, row: 12, variant: 1 },
     { col: 10, row: 13, variant: 2 },
+    // Cook — stands at the taco truck window (truck is at row 5, cook
+    // stands on the tile just below the left half of the truck)
+    { col: 12, row: 6,  variant: 'cook' },
   ];
 }
 

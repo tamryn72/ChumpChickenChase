@@ -6,7 +6,7 @@ import {
 import { createRng } from './rng.js';
 import { bakeAll } from './render/bake.js';
 import { render } from './render/renderer.js';
-import { drawMenu, drawScore, drawPause } from './render/menu.js';
+import { drawMenu, drawScore, drawPause, drawTransition } from './render/menu.js';
 import { drawCutscene } from './render/cutscene.js';
 import { getWorldDef, WORLD_ORDER } from './world/index.js';
 import { TILE_TYPES as T } from './world/level.js';
@@ -27,12 +27,16 @@ import {
 import { createTownie, tickTownie } from './entities/npc.js';
 import {
   createParticles, tickParticles, addGoo, addFeather,
-  addDebrisBurst, addAttackSpark, addEggSplat, setMotionScale,
+  addDebrisBurst, addAttackSpark, addEggSplat, addSpitFire, setMotionScale,
 } from './systems/particles.js';
 import { createBubbles, tickBubbles, say } from './systems/bubbles.js';
 import { createCutscene, tickCutscene, endCutscene } from './systems/cutscene.js';
 import { loadSave, saveSave, recordRun } from './systems/save.js';
-import { playSfx, setSfxMuted, kickAudio } from './audio/sfx.js';
+import { playSfx, setSfxMuted, setSfxVolume, kickAudio } from './audio/sfx.js';
+import {
+  trapPaletteSlots, TOUCH_DPAD, TOUCH_PAUSE_BTN, TOUCH_GO_BTN,
+} from './render/ui.js';
+import { menuLayout, pauseMenuLayout } from './render/menu.js';
 import { input } from './input.js';
 
 // --- canvas + context ---
@@ -47,6 +51,7 @@ bakeAll();
 // Apply save-backed accessibility settings before any game state is built.
 const bootSave = loadSave();
 setSfxMuted(bootSave.settings?.muted === true);
+setSfxVolume(bootSave.settings?.volume ?? 1);
 setMotionScale(bootSave.settings?.reducedMotion ? 0.35 : 1);
 // Prime the AudioContext on first user gesture (autoplay policy).
 function primeAudioOnce() {
@@ -82,6 +87,22 @@ function freshStats() {
     tacosPlayer:  0,
     tacosChump:   0,
   };
+}
+
+// --- menu juice / state transitions -----------------------------------------
+//
+// `menuIntroT` counts up while in MENU to drive the staged title intro.
+// `transitionT` counts down every tick; while > 0 a full-screen flash +
+// banner overlays the next state to punch state changes.
+// Both are driven through setState() so every state change picks them up.
+const MENU_INTRO_LEN = 52;
+const TRANSITION_LEN = 14;
+
+function setState(g, newState) {
+  if (g.state === newState) return;
+  g.state = newState;
+  g.transitionT = TRANSITION_LEN;
+  if (newState === 'MENU') g.menuIntroT = 0;
 }
 
 // --- game state (mutated by loadWorld) ---
@@ -127,6 +148,11 @@ const game = {
   menuSettingIndex: 0,   // which setting row is highlighted when column==='settings'
   paused: false,         // in-chase pause overlay
   pauseIndex: 0,
+  // touch state — flipped on first touchstart so touch UI and layouts render
+  touchActive: false,
+  // menu juice / transition counters
+  menuIntroT: 0,
+  transitionT: 0,
 };
 
 function loadWorld(num) {
@@ -165,7 +191,7 @@ function loadWorld(num) {
   game.result = null;
   game.resultStats = null;
   game.cutscene = null;
-  game.state = 'PLAN';
+  setState(game, 'PLAN');
 }
 
 function startLevelFromMenu() {
@@ -177,7 +203,15 @@ function startLevelFromMenu() {
 }
 
 // --- menu interaction (world list + settings column) ---
-const SETTING_KEYS = ['muted', 'reducedMotion', 'highContrast'];
+const SETTING_KEYS = ['muted', 'volume', 'reducedMotion', 'highContrast'];
+
+// Volume slider steps — Enter/tap cycles through these.
+const VOLUME_STEPS = [0.25, 0.5, 0.75, 1.0, 1.25];
+function nextVolumeStep(v) {
+  const cur = VOLUME_STEPS.findIndex((s) => Math.abs(s - v) < 0.01);
+  const next = (cur + 1) % VOLUME_STEPS.length;
+  return VOLUME_STEPS[next];
+}
 
 function tickMenu(g) {
   // column toggle with Tab / Left / Right arrow
@@ -218,9 +252,14 @@ function tickMenu(g) {
 
 function toggleSetting(g, key) {
   const s = g.save.settings;
-  s[key] = !s[key];
-  if (key === 'muted')         setSfxMuted(s.muted);
-  if (key === 'reducedMotion') setMotionScale(s.reducedMotion ? 0.35 : 1);
+  if (key === 'volume') {
+    s.volume = nextVolumeStep(s.volume ?? 1);
+    setSfxVolume(s.volume);
+  } else {
+    s[key] = !s[key];
+    if (key === 'muted')         setSfxMuted(s.muted);
+    if (key === 'reducedMotion') setMotionScale(s.reducedMotion ? 0.35 : 1);
+  }
   saveSave(g.save);
   playSfx('menu_select');
 }
@@ -230,6 +269,7 @@ function toggleSetting(g, key) {
 const PAUSE_ENTRIES = [
   { kind: 'resume' },
   { kind: 'setting', key: 'muted' },
+  { kind: 'setting', key: 'volume' },
   { kind: 'setting', key: 'reducedMotion' },
   { kind: 'setting', key: 'highContrast' },
   { kind: 'quit' },
@@ -258,7 +298,7 @@ function tickPauseMenu(g) {
     } else if (entry.kind === 'quit') {
       playSfx('menu_back');
       g.paused = false;
-      game.state = 'MENU';
+      setState(game, 'MENU');
     }
   }
   if (input.wasPressed('KeyM')) toggleSetting(g, 'muted');
@@ -270,7 +310,7 @@ if (QUICKSTART) {
 } else {
   // still need non-null placeholders so renderer doesn't crash if called
   loadWorld(1);
-  game.state = 'MENU';
+  setState(game, 'MENU');
 }
 
 function snapshotStats() {
@@ -295,14 +335,14 @@ function enterEscapeCutscene() {
   game.resultStats = snapshotStats();
   const scriptName = game.worldDef?.cutsceneScript || 'FARM_ESCAPE';
   game.cutscene = createCutscene(scriptName);
-  game.state = 'ESCAPE_CUTSCENE';
+  setState(game, 'ESCAPE_CUTSCENE');
   playSfx('victory');
 }
 
 function enterScore(result) {
   game.result = result;
   if (!game.resultStats) game.resultStats = snapshotStats();
-  game.state = 'SCORE';
+  setState(game, 'SCORE');
   game.save = recordRun(game.save, game.worldNum, result, game.resultStats);
   saveSave(game.save);
 }
@@ -390,6 +430,180 @@ canvas.addEventListener('click', (e) => {
   }
 });
 
+// --- touch controls --------------------------------------------------------
+//
+// First touch flips `game.touchActive`, which makes ui.js draw the virtual
+// d-pad / GO / pause / trap palette. We hit-test touches against those rects
+// and feed the result back into `input` via setTouchDir / injectPress.
+
+const activeTouches = new Map(); // identifier -> { role, x, y }
+
+function touchPointToCanvas(t) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (t.clientX - rect.left) * (canvas.width / rect.width),
+    y: (t.clientY - rect.top)  * (canvas.height / rect.height),
+  };
+}
+
+function rectHit(x, y, r) {
+  return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+}
+
+function dpadHit(x, y) {
+  const dx = x - TOUCH_DPAD.cx;
+  const dy = y - TOUCH_DPAD.cy;
+  const reach = TOUCH_DPAD.r + 14;
+  return dx * dx + dy * dy <= reach * reach;
+}
+
+function updateDpadFromPoint(x, y) {
+  const dx = x - TOUCH_DPAD.cx;
+  const dy = y - TOUCH_DPAD.cy;
+  const dead = 10;
+  if (Math.abs(dx) < dead && Math.abs(dy) < dead) {
+    input.setTouchDir(0, 0);
+    return;
+  }
+  // dominant axis wins — avoids horizontal-priority stealing vertical moves
+  if (Math.abs(dx) > Math.abs(dy)) input.setTouchDir(Math.sign(dx), 0);
+  else                             input.setTouchDir(0, Math.sign(dy));
+}
+
+function handleTouchStart(x, y) {
+  // Returns a role string ('dpad' | 'pause' | 'go' | 'palette' | 'place' |
+  // 'menu' | 'setting' | 'pause_entry' | 'enter' | null) so touchmove /
+  // touchend can act accordingly.
+
+  // Pause overlay has priority when it's up
+  if (game.state === 'CHASE' && game.paused) {
+    const layout = pauseMenuLayout();
+    for (let i = 0; i < layout.rows.length; i++) {
+      const row = layout.rows[i];
+      if (y >= row.y - layout.pickH / 2 && y <= row.y + layout.pickH / 2) {
+        game.pauseIndex = i;
+        input.injectPress('Enter');
+        return 'pause_entry';
+      }
+    }
+    // tap outside rows = close pause
+    game.paused = false;
+    playSfx('menu_back');
+    return 'pause_close';
+  }
+
+  if (game.state === 'CHASE') {
+    if (dpadHit(x, y)) {
+      updateDpadFromPoint(x, y);
+      return 'dpad';
+    }
+    if (rectHit(x, y, TOUCH_PAUSE_BTN)) {
+      game.paused = true;
+      game.pauseIndex = 0;
+      playSfx('menu_cursor');
+      return 'pause';
+    }
+    return null;
+  }
+
+  if (game.state === 'PLAN') {
+    if (rectHit(x, y, TOUCH_GO_BTN)) {
+      input.injectPress('Enter');
+      return 'go';
+    }
+    const slots = trapPaletteSlots(game);
+    for (const s of slots) {
+      if (rectHit(x, y, s)) {
+        if ((game.inventory[s.type] ?? 0) > 0) {
+          game.selectedTrap = s.type;
+          playSfx('menu_cursor');
+        }
+        return 'palette';
+      }
+    }
+    // fall through: tap-to-place on grid (ignore taps in the bottom strip
+    // band so a fat-thumb miss on a palette slot doesn't place a trap)
+    if (y < CANVAS_H - 52 && y > 24) {
+      const col = Math.floor(x / TILE);
+      const row = Math.floor(y / TILE);
+      tryPlaceTrap(col, row);
+    }
+    return 'place';
+  }
+
+  if (game.state === 'MENU') {
+    const layout = menuLayout();
+    // world list rows
+    for (let i = 0; i < layout.worlds.length; i++) {
+      const row = layout.worlds[i];
+      if (rectHit(x, y, row)) {
+        game.menuColumn = 'worlds';
+        game.menuIndex = i;
+        startLevelFromMenu();
+        return 'menu';
+      }
+    }
+    // settings rows
+    for (let i = 0; i < layout.settings.length; i++) {
+      const row = layout.settings[i];
+      if (rectHit(x, y, row)) {
+        game.menuColumn = 'settings';
+        game.menuSettingIndex = i;
+        toggleSetting(game, SETTING_KEYS[i]);
+        return 'setting';
+      }
+    }
+    return null;
+  }
+
+  if (game.state === 'SCORE') {
+    input.injectPress('Enter');
+    return 'enter';
+  }
+
+  if (game.state === 'ESCAPE_CUTSCENE') {
+    input.injectPress('Space');
+    return 'enter';
+  }
+
+  return null;
+}
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  game.touchActive = true;
+  input.markTouchActive();
+  for (const t of e.changedTouches) {
+    const { x, y } = touchPointToCanvas(t);
+    const role = handleTouchStart(x, y);
+    activeTouches.set(t.identifier, { role, x, y });
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const rec = activeTouches.get(t.identifier);
+    if (!rec) continue;
+    const { x, y } = touchPointToCanvas(t);
+    rec.x = x;
+    rec.y = y;
+    if (rec.role === 'dpad') updateDpadFromPoint(x, y);
+  }
+}, { passive: false });
+
+function handleTouchEnd(e) {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const rec = activeTouches.get(t.identifier);
+    if (!rec) continue;
+    if (rec.role === 'dpad') input.setTouchDir(0, 0);
+    activeTouches.delete(t.identifier);
+  }
+}
+canvas.addEventListener('touchend',    handleTouchEnd, { passive: false });
+canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
 function tryPlaceTrap(col, row) {
   if (col < 0 || row < 0 || col >= game.level.w || row >= game.level.h) return;
   if (!game.level.isWalkable(col, row)) return;
@@ -471,11 +685,13 @@ function collectForChump(g, p) {
     p.state = 'gone';
     g.chump.stunTicks = 10;
     addRage(g.chump, 30);
-    addEggSplat(g.particles, p.col, p.row, g.rng);
-    addShake(10);
+    // Spit-fire animation: Chump exhales a cone of flame in his facing
+    // direction. Bigger flash than the old egg-splat placeholder.
+    addSpitFire(g.particles, g.chump.col, g.chump.row, g.chump.facing, g.rng);
+    addShake(12);
     g.stats.tacosChump += 1;
     say(g.bubbles, g.chump, g.rng.pick(TACO_HATE_BUBBLES), 'taco_hate', 15, 30);
-    playSfx('pickup_taco');
+    playSfx('spit_fire');
     return;
   }
   if (p.type === PICKUP_TYPES.BURGER) {
@@ -640,6 +856,10 @@ function tickFallingRocks(g) {
 function tick(g) {
   g.tick += 1;
 
+  // menu intro + transition counters advance every tick regardless of state
+  if (g.state === 'MENU' && g.menuIntroT < MENU_INTRO_LEN) g.menuIntroT += 1;
+  if (g.transitionT > 0) g.transitionT -= 1;
+
   if (g.state === 'MENU') {
     tickMenu(g);
   } else if (g.state === 'PLAN') {
@@ -653,7 +873,7 @@ function tick(g) {
     if (input.wasPressed('Digit8')) g.selectedTrap = TRAP_TYPES.CAT_DECOY;
     g.planTimer -= 1;
     if (input.wasPressed('Enter') || g.planTimer <= 0) {
-      g.state = 'CHASE';
+      setState(g, 'CHASE');
     }
     tickParticles(g.particles);
     tickBubbles(g.bubbles);
@@ -698,7 +918,16 @@ function tick(g) {
       flamingEggs: g.worldDef?.flamingEggs === true,
     });
 
-    for (const n of g.townies) tickTownie(n, g.level, g.rng, g.chump);
+    for (const n of g.townies) {
+      const wasWander = n.state !== 'panic';
+      tickTownie(n, g.level, g.rng, g.chump);
+      // Cook screams on the rising edge of panic — fires once per entry,
+      // not every tick. Rate-limited so it doesn't spam at the panic edge.
+      if (n.variant === 'cook' && wasWander && n.state === 'panic') {
+        playSfx('cook_scream');
+        say(g.bubbles, n, 'MY TACOS', 'cook_scream', 15, 24);
+      }
+    }
 
     tickPickups(g);
     if (g.worldDef?.fallingRocks) tickFallingRocks(g);
@@ -720,7 +949,7 @@ function tick(g) {
     if (g.chump.stunTicks > 0 && manhattan(g.player, g.chump) <= 1) {
       g.catches += 1;
       say(g.bubbles, g.chump, 'NOT AGAIN', 'hit', 10, 20);
-      g.state = 'GOTCHA';
+      setState(g, 'GOTCHA');
       g.gotchaTicks = 15;
       playSfx('gotcha');
     }
@@ -746,7 +975,7 @@ function tick(g) {
         enterEscapeCutscene();
       } else {
         respawnChumpFarFromPlayer();
-        g.state = 'CHASE';
+        setState(g, 'CHASE');
       }
     }
   } else if (g.state === 'ESCAPE_CUTSCENE') {
@@ -761,7 +990,7 @@ function tick(g) {
     tickBubbles(g.bubbles);
   } else if (g.state === 'SCORE') {
     if (input.wasPressed('Enter')) {
-      game.state = 'MENU';
+      setState(game, 'MENU');
     }
     // On the final victory, R replays W5 immediately.
     if (g.worldNum === 5 && g.result === 'won' && input.wasPressed('KeyR')) {
@@ -776,17 +1005,20 @@ function tick(g) {
 function renderFrame(alpha) {
   if (game.state === 'MENU') {
     drawMenu(ctx, game, game.save);
+    drawTransition(ctx, game);
     drawAccessibilityOverlay(ctx);
     return;
   }
   if (game.state === 'ESCAPE_CUTSCENE') {
     drawCutscene(ctx, game.cutscene, alpha);
+    drawTransition(ctx, game);
     drawAccessibilityOverlay(ctx);
     return;
   }
   if (game.state === 'SCORE') {
     render(ctx, game, alpha);
     drawScore(ctx, game);
+    drawTransition(ctx, game);
     drawAccessibilityOverlay(ctx);
     return;
   }
@@ -794,6 +1026,7 @@ function renderFrame(alpha) {
   if (game.state === 'CHASE' && game.paused) {
     drawPause(ctx, game);
   }
+  drawTransition(ctx, game);
   drawAccessibilityOverlay(ctx);
 }
 

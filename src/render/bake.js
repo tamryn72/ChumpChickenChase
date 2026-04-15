@@ -123,4 +123,8 @@ export function bakeAll() {
   cache.bake('townie_1_panic', 16, 16, sprites.drawTownie1Panic);
   cache.bake('townie_2_idle',  16, 16, sprites.drawTownie2Idle);
   cache.bake('townie_2_panic', 16, 16, sprites.drawTownie2Panic);
+
+  // --- cook NPC (16x16) — stands at the taco truck window ---
+  cache.bake('cook_idle',  16, 16, sprites.drawCookIdle);
+  cache.bake('cook_panic', 16, 16, sprites.drawCookPanic);
 }

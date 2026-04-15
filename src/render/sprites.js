@@ -612,3 +612,88 @@ export function drawTownie1Idle(ctx)  { townieBody(ctx, 1, false); }
 export function drawTownie1Panic(ctx) { townieBody(ctx, 1, true);  }
 export function drawTownie2Idle(ctx)  { townieBody(ctx, 2, false); }
 export function drawTownie2Panic(ctx) { townieBody(ctx, 2, true);  }
+
+// ---------------------------------------------------------------------------
+// Cook NPC (stands at the taco truck window) — 16x16
+// ---------------------------------------------------------------------------
+
+function cookBody(ctx, panic) {
+  // chef hat — white mushroom top + yellow band
+  ctx.fillStyle = P.white;
+  ctx.fillRect(4, 0, 8, 1);
+  ctx.fillRect(3, 1, 10, 2);
+  ctx.fillStyle = P.yellow;
+  ctx.fillRect(4, 3, 8, 1);
+  // hat shadow
+  ctx.fillStyle = P.lightGrey;
+  ctx.fillRect(11, 1, 2, 1);
+  // face
+  ctx.fillStyle = P.peach;
+  ctx.fillRect(5, 4, 6, 3);
+  // eyes
+  ctx.fillStyle = P.black;
+  if (panic) {
+    // wide panic eyes
+    ctx.fillRect(5, 5, 1, 1);
+    ctx.fillRect(10, 5, 1, 1);
+    // screaming O mouth
+    ctx.fillRect(7, 6, 2, 2);
+  } else {
+    ctx.fillRect(6, 5, 1, 1);
+    ctx.fillRect(9, 5, 1, 1);
+    // content smile
+    ctx.fillRect(7, 6, 2, 1);
+  }
+  // mustache
+  ctx.fillStyle = P.brown;
+  ctx.fillRect(6, 6, 1, 1);
+  ctx.fillRect(9, 6, 1, 1);
+  // white chef coat torso
+  ctx.fillStyle = P.white;
+  ctx.fillRect(4, 7, 8, 5);
+  // apron red stripes + buttons
+  ctx.fillStyle = P.red;
+  ctx.fillRect(5, 8, 1, 1);
+  ctx.fillRect(10, 8, 1, 1);
+  ctx.fillRect(5, 10, 1, 1);
+  ctx.fillRect(10, 10, 1, 1);
+  // apron center button line
+  ctx.fillStyle = P.darkGrey;
+  ctx.fillRect(7, 8, 2, 1);
+  ctx.fillRect(7, 10, 2, 1);
+  // arms differ by state
+  if (panic) {
+    // arms flailing up
+    ctx.fillStyle = P.white;
+    ctx.fillRect(1, 4, 2, 3);
+    ctx.fillRect(13, 4, 2, 3);
+    ctx.fillStyle = P.peach;
+    ctx.fillRect(1, 3, 2, 1);
+    ctx.fillRect(13, 3, 2, 1);
+  } else {
+    // one arm holds a spatula
+    ctx.fillStyle = P.white;
+    ctx.fillRect(2, 8, 2, 3);
+    ctx.fillRect(12, 8, 2, 3);
+    ctx.fillStyle = P.peach;
+    ctx.fillRect(2, 11, 2, 1);
+    ctx.fillStyle = P.peach;
+    ctx.fillRect(12, 11, 2, 1);
+    // spatula handle + pan
+    ctx.fillStyle = P.brown;
+    ctx.fillRect(14, 9, 1, 3);
+    ctx.fillStyle = P.lightGrey;
+    ctx.fillRect(14, 7, 2, 2);
+  }
+  // pants (jeans)
+  ctx.fillStyle = P.darkBlue;
+  ctx.fillRect(5, 12, 2, 3);
+  ctx.fillRect(9, 12, 2, 3);
+  // shoes
+  ctx.fillStyle = P.black;
+  ctx.fillRect(5, 15, 2, 1);
+  ctx.fillRect(9, 15, 2, 1);
+}
+
+export function drawCookIdle(ctx)  { cookBody(ctx, false); }
+export function drawCookPanic(ctx) { cookBody(ctx, true);  }

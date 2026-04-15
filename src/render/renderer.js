@@ -138,7 +138,12 @@ function drawTownies(ctx, townies, alpha) {
   for (const n of townies) {
     const { x, y } = towniePixelPos(n, alpha);
     const state = n.state === 'panic' ? 'panic' : 'idle';
-    const key = `townie_${n.variant % 3}_${state}`;
+    let key;
+    if (n.variant === 'cook') {
+      key = `cook_${state}`;
+    } else {
+      key = `townie_${(n.variant | 0) % 3}_${state}`;
+    }
     cache.draw(ctx, key, x + 8, y + 8);
   }
 }
@@ -365,6 +370,10 @@ export function render(ctx, game, alpha) {
   drawBubbles(ctx, game.bubbles, (entity) => {
     if (entity === game.player) return playerPixelPos(entity, alpha);
     if (entity === game.chump)  return chumpPixelPos(entity, alpha);
+    // townies (including cook) carry their own col/row — use tile position
+    if (game.townies && game.townies.includes(entity)) {
+      return towniePixelPos(entity, alpha);
+    }
     return null;
   });
 

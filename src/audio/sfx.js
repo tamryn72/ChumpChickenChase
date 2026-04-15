@@ -7,12 +7,22 @@
 // All sounds are small synth routines built from oscillators + noise bursts.
 // Each one takes ~10-20 lines and no external data.
 
+// Base master gain — every effect is multiplied by this. Kept low so the
+// cumulative mix under heavy chaos (buildings destroyed, eggs landing,
+// rocks hitting) stays under clipping. User volume multiplies on top.
+const BASE_MASTER = 0.5;
+
 const state = {
   ctx: null,
   master: null,
   muted: false,
+  volume: 1,      // user-controlled 0..1.25
   noiseBuf: null, // cached white-noise buffer for splat sounds
 };
+
+function effectiveGain() {
+  return state.muted ? 0 : BASE_MASTER * state.volume;
+}
 
 // -- lifecycle ---------------------------------------------------------------
 
@@ -28,7 +38,7 @@ function ensureCtx() {
     return null;
   }
   state.master = state.ctx.createGain();
-  state.master.gain.value = state.muted ? 0 : 0.6;
+  state.master.gain.value = effectiveGain();
   state.master.connect(state.ctx.destination);
   return state.ctx;
 }
@@ -47,7 +57,7 @@ export function setSfxMuted(muted) {
   state.muted = !!muted;
   if (state.master) {
     state.master.gain.setValueAtTime(
-      state.muted ? 0 : 0.6,
+      effectiveGain(),
       state.ctx ? state.ctx.currentTime : 0,
     );
   }
@@ -55,6 +65,24 @@ export function setSfxMuted(muted) {
 
 export function isSfxMuted() {
   return state.muted;
+}
+
+// User-controlled master volume scale. 0..1.25 typical range.
+// 1.0 is the baseline mix tuned in this module. Higher values can clip under
+// chaos, lower values quiet everything proportionally.
+export function setSfxVolume(v) {
+  const clamped = Math.max(0, Math.min(1.25, v));
+  state.volume = clamped;
+  if (state.master) {
+    state.master.gain.setValueAtTime(
+      effectiveGain(),
+      state.ctx ? state.ctx.currentTime : 0,
+    );
+  }
+}
+
+export function getSfxVolume() {
+  return state.volume;
 }
 
 // Resume the AudioContext (browsers suspend it until a gesture). Call this
@@ -126,43 +154,59 @@ function noise(duration, type = 'lowpass', cutoff = 2000, peak = 0.35) {
 // These are the SFX names the game calls. Keep them stable — main.js and
 // other consumers use strings.
 
+// Peak gains are normalized across effects now — most UI/pickups sit at
+// ~0.18-0.22, combat at ~0.24-0.30, big impacts at ~0.30-0.38. The master
+// gain multiplies all of these, so the user slider works predictably.
 const EFFECTS = {
-  menu_cursor:  () => beep(520, 0.05, 'square', 0.18),
-  menu_select:  () => { beep(660, 0.06, 'square', 0.22); setTimeout(() => beep(880, 0.1, 'square', 0.22), 60); },
-  menu_back:    () => sweep(520, 260, 0.1, 'square', 0.22),
+  menu_cursor:  () => beep(520, 0.05, 'square', 0.16),
+  menu_select:  () => { beep(660, 0.06, 'square', 0.20); setTimeout(() => beep(880, 0.1, 'square', 0.20), 60); },
+  menu_back:    () => sweep(520, 260, 0.1, 'square', 0.20),
 
-  trap_place:   () => beep(440, 0.06, 'triangle', 0.25),
-  trap_snap:    () => { sweep(900, 180, 0.15, 'square', 0.35); noise(0.08, 'highpass', 1800, 0.2); },
-  gotcha:       () => { beep(880, 0.08, 'square', 0.3); setTimeout(() => beep(1320, 0.12, 'square', 0.3), 80); setTimeout(() => beep(1760, 0.16, 'triangle', 0.3), 180); },
+  trap_place:   () => beep(440, 0.06, 'triangle', 0.22),
+  trap_snap:    () => { sweep(900, 180, 0.15, 'square', 0.28); noise(0.08, 'highpass', 1800, 0.16); },
+  gotcha:       () => { beep(880, 0.08, 'square', 0.26); setTimeout(() => beep(1320, 0.12, 'square', 0.26), 80); setTimeout(() => beep(1760, 0.16, 'triangle', 0.26), 180); },
 
-  egg_throw:    () => sweep(180, 420, 0.08, 'triangle', 0.22),
-  egg_splat:    () => noise(0.14, 'lowpass', 900, 0.35),
-  egg_hit:      () => { noise(0.12, 'lowpass', 700, 0.4); sweep(380, 120, 0.14, 'sawtooth', 0.25); },
-  rock_warn:    () => beep(220, 0.08, 'sine', 0.15),
-  rock_land:    () => { noise(0.25, 'lowpass', 300, 0.55); sweep(160, 40, 0.3, 'sawtooth', 0.4); },
+  egg_throw:    () => sweep(180, 420, 0.08, 'triangle', 0.20),
+  egg_splat:    () => noise(0.14, 'lowpass', 900, 0.25),
+  egg_hit:      () => { noise(0.12, 'lowpass', 700, 0.30); sweep(380, 120, 0.14, 'sawtooth', 0.22); },
+  rock_warn:    () => beep(220, 0.08, 'sine', 0.14),
+  rock_land:    () => { noise(0.25, 'lowpass', 300, 0.38); sweep(160, 40, 0.3, 'sawtooth', 0.30); },
 
-  building_hit:     () => noise(0.06, 'bandpass', 1800, 0.25),
-  building_destroy: () => { noise(0.3, 'lowpass', 400, 0.55); sweep(220, 55, 0.35, 'sawtooth', 0.35); },
+  building_hit:     () => noise(0.06, 'bandpass', 1800, 0.22),
+  building_destroy: () => { noise(0.3, 'lowpass', 400, 0.38); sweep(220, 55, 0.35, 'sawtooth', 0.28); },
 
-  pickup_taco:   () => { beep(660, 0.05, 'triangle', 0.22); setTimeout(() => beep(990, 0.06, 'triangle', 0.22), 40); },
-  pickup_burger: () => { beep(420, 0.08, 'sawtooth', 0.25); setTimeout(() => beep(630, 0.08, 'triangle', 0.22), 70); },
+  pickup_taco:   () => { beep(660, 0.05, 'triangle', 0.20); setTimeout(() => beep(990, 0.06, 'triangle', 0.20), 40); },
+  pickup_burger: () => { beep(420, 0.08, 'sawtooth', 0.22); setTimeout(() => beep(630, 0.08, 'triangle', 0.20), 70); },
   pickup_cat:    () => { beep(880, 0.05, 'square', 0.18); setTimeout(() => beep(1200, 0.06, 'square', 0.18), 40); },
 
-  final_form: () => { sweep(120, 60, 0.4, 'sawtooth', 0.5); noise(0.35, 'highpass', 800, 0.3); },
-  teleport:   () => sweep(1600, 300, 0.18, 'sine', 0.3),
+  // Chump spits fire after eating a taco — sizzling whoosh + flame crackle
+  spit_fire: () => {
+    sweep(180, 1400, 0.22, 'sawtooth', 0.26);
+    setTimeout(() => noise(0.28, 'highpass', 1200, 0.22), 20);
+    setTimeout(() => sweep(1200, 300, 0.18, 'sawtooth', 0.20), 90);
+  },
 
-  chump_squawk: () => { sweep(560, 720, 0.08, 'square', 0.28); setTimeout(() => sweep(720, 420, 0.08, 'square', 0.28), 70); },
-  cowabunga:    () => { for (let i = 0; i < 4; i++) setTimeout(() => beep(330 + i * 110, 0.1, 'square', 0.28), i * 70); },
+  // Cook NPC screams when Chump gets close to the taco truck
+  cook_scream: () => {
+    sweep(520, 880, 0.12, 'sawtooth', 0.22);
+    setTimeout(() => sweep(880, 520, 0.1, 'sawtooth', 0.18), 110);
+  },
+
+  final_form: () => { sweep(120, 60, 0.4, 'sawtooth', 0.36); noise(0.35, 'highpass', 800, 0.22); },
+  teleport:   () => sweep(1600, 300, 0.18, 'sine', 0.24),
+
+  chump_squawk: () => { sweep(560, 720, 0.08, 'square', 0.24); setTimeout(() => sweep(720, 420, 0.08, 'square', 0.24), 70); },
+  cowabunga:    () => { for (let i = 0; i < 4; i++) setTimeout(() => beep(330 + i * 110, 0.1, 'square', 0.24), i * 70); },
 
   victory:  () => {
     const notes = [523, 659, 784, 1047, 1319];
-    notes.forEach((f, i) => setTimeout(() => beep(f, 0.12, 'triangle', 0.3), i * 80));
+    notes.forEach((f, i) => setTimeout(() => beep(f, 0.12, 'triangle', 0.26), i * 80));
   },
   game_over: () => {
     const notes = [523, 392, 330, 262];
-    notes.forEach((f, i) => setTimeout(() => beep(f, 0.16, 'sawtooth', 0.3), i * 120));
+    notes.forEach((f, i) => setTimeout(() => beep(f, 0.16, 'sawtooth', 0.26), i * 120));
   },
-  player_hit: () => sweep(420, 80, 0.18, 'sawtooth', 0.3),
+  player_hit: () => sweep(420, 80, 0.18, 'sawtooth', 0.26),
 };
 
 // Public entry point.
