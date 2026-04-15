@@ -370,6 +370,143 @@ export function drawTransition(ctx, game) {
   }
 }
 
+// --- Executive Cluck signing ceremony ---
+//
+// Played in SIGNING state (between GOTCHA and the next CHASE, on the first
+// catch of a level). Parchment scroll slides in from the right, Chump stands
+// to the left dipping his beak, a red "SIGNED" stamp slams on. Skippable
+// with Enter/Space. Total duration matches SIGNING_LEN in main.js (32 ticks).
+
+const SIGNING_TOTAL = 32;
+
+const ORDER_INFO = {
+  speed: {
+    title: 'ORDER FOR SPEED',
+    tagline: '"for efficiency reasons"',
+    lines: ['player inputs now queue', 'one tick late, believe me'],
+  },
+  supersonic: {
+    title: 'SUPERSONIC ORDER',
+    tagline: '"going supersonic, folks"',
+    lines: ['chump can trigger slow-mo', 'on the player at will'],
+  },
+  foxes: {
+    title: 'RED FOXES DIRECTIVE',
+    tagline: '"very red, very fox"',
+    lines: ['three fox minions appear', 'to stagger the player'],
+  },
+  tropical: {
+    title: 'TROPICAL ORDER',
+    tagline: '"beautiful weather, really"',
+    lines: ['chump now throws ice cubes', 'that freeze on a direct hit'],
+  },
+};
+
+export function drawSigning(ctx, game) {
+  // dim the world behind the overlay
+  ctx.fillStyle = 'rgba(0,0,0,0.68)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  const T = game.signingT || 0;
+  const elapsed = SIGNING_TOTAL - T;
+
+  // scroll slide-in from right (done by elapsed=8)
+  const slide = Math.min(1, elapsed / 8);
+  const ease = 1 - Math.pow(1 - slide, 3);
+  const scrollW = 460;
+  const scrollH = 220;
+  const targetX = CANVAS_W - scrollW - 30;
+  const scrollX = (CANVAS_W + 40) - ((CANVAS_W + 40) - targetX) * ease;
+  const scrollY = 130;
+
+  // parchment body
+  ctx.fillStyle = '#f0dba8';
+  ctx.fillRect(scrollX, scrollY, scrollW, scrollH);
+  ctx.fillStyle = '#e2c68a';
+  ctx.fillRect(scrollX, scrollY, scrollW, 5);
+  ctx.fillRect(scrollX, scrollY + scrollH - 5, scrollW, 5);
+  // rolled ends (darker vertical bars)
+  ctx.fillStyle = '#8b6b38';
+  ctx.fillRect(scrollX - 10, scrollY - 6, 10, scrollH + 12);
+  ctx.fillRect(scrollX + scrollW, scrollY - 6, 10, scrollH + 12);
+  ctx.fillStyle = '#5a3f18';
+  ctx.fillRect(scrollX - 10, scrollY - 6, 10, 3);
+  ctx.fillRect(scrollX - 10, scrollY + scrollH + 3, 10, 3);
+  ctx.fillRect(scrollX + scrollW, scrollY - 6, 10, 3);
+  ctx.fillRect(scrollX + scrollW, scrollY + scrollH + 3, 10, 3);
+
+  const info = ORDER_INFO[game.execOrder] || ORDER_INFO.speed;
+
+  // header
+  ctx.fillStyle = '#2a1208';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = 'bold 13px ui-monospace, monospace';
+  ctx.fillText('EXECUTIVE CLUCK', scrollX + scrollW / 2, scrollY + 28);
+  // horizontal rule
+  ctx.fillRect(scrollX + 40, scrollY + 36, scrollW - 80, 1);
+  // order name (big)
+  ctx.font = 'bold 22px ui-monospace, monospace';
+  ctx.fillStyle = '#8b1f08';
+  ctx.fillText(info.title, scrollX + scrollW / 2, scrollY + 72);
+  // tagline
+  ctx.font = 'italic 11px ui-monospace, monospace';
+  ctx.fillStyle = '#5a3018';
+  ctx.fillText(info.tagline, scrollX + scrollW / 2, scrollY + 94);
+  // description lines
+  ctx.font = '11px ui-monospace, monospace';
+  ctx.fillStyle = '#2a1208';
+  for (let i = 0; i < info.lines.length; i++) {
+    ctx.fillText(info.lines[i], scrollX + scrollW / 2, scrollY + 124 + i * 14);
+  }
+
+  // red "SIGNED" stamp — appears after beak dip, grows into place
+  const stampElapsed = elapsed - 18;
+  if (stampElapsed >= 0) {
+    const growthT = Math.min(1, stampElapsed / 3);
+    const stampScale = 2.2 - growthT * 1.2; // slams down from 2.2x → 1.0x
+    ctx.save();
+    ctx.translate(scrollX + scrollW - 84, scrollY + scrollH - 44);
+    ctx.rotate(-0.18);
+    ctx.scale(stampScale, stampScale);
+    ctx.globalAlpha = growthT;
+    ctx.strokeStyle = '#b00020';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-42, -22, 84, 44);
+    ctx.strokeRect(-37, -17, 74, 34);
+    ctx.fillStyle = '#b00020';
+    ctx.font = 'bold 16px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SIGNED', 0, 0);
+    ctx.restore();
+    ctx.lineWidth = 1;
+  }
+
+  // Chump standing to the left of the scroll, dipping his beak on each
+  // "sign" beat. Appears as the scroll finishes sliding in.
+  if (slide >= 0.6) {
+    const beakDip = Math.abs(Math.sin(elapsed * 0.5)) * 4;
+    ctx.save();
+    ctx.translate(60 + 80, scrollY + scrollH / 2 + beakDip);
+    ctx.scale(3, 3);
+    const frame = Math.floor(elapsed / 3) % 2;
+    cache.draw(ctx, `chump_right_${frame}`, -12, -12);
+    ctx.restore();
+    // scratchy quill line next to his beak
+    ctx.fillStyle = P.black;
+    ctx.fillRect(60 + 140, scrollY + scrollH / 2 - 2 + beakDip, 14, 1);
+  }
+
+  // skip hint
+  if (Math.floor(game.tick / 10) % 2 === 0) {
+    ctx.fillStyle = P.lightGrey;
+    ctx.font = '9px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ENTER / tap to skip', CANVAS_W / 2, CANVAS_H - 12);
+  }
+}
+
 // --- In-chase pause overlay ---
 
 export function drawPause(ctx, game) {
@@ -461,6 +598,9 @@ export function drawScore(ctx, game) {
   ctx.fillText(sub, CANVAS_W / 2, 70);
 
   const s = game.resultStats || {};
+  const ordersSeen = game.save?.ordersSeen || {};
+  const ordersSeenCount = ['speed', 'supersonic', 'foxes', 'tropical']
+    .reduce((n, k) => n + (ordersSeen[k] ? 1 : 0), 0);
   const rows = [
     ['CATCHES',         `${s.catches ?? 0} / ${s.catchesNeeded ?? 2}`],
     ['BUILDINGS SAVED', `${s.buildingsSaved ?? 0} / ${s.buildingsTotal ?? 0}`],
@@ -471,6 +611,7 @@ export function drawScore(ctx, game) {
     ['BURGERS (CHUMP)', `${s.burgersChump ?? 0}`],
     ['TACOS (YOU)',     `${s.tacosPlayer ?? 0}`],
     ['TACOS (CHUMP)',   `${s.tacosChump ?? 0}`],
+    ['EXEC CLUCKS SEEN', `${ordersSeenCount} / 4`],
     ['TIME',            `${((s.elapsedTicks ?? 0) / 10).toFixed(1)}s`],
   ];
 

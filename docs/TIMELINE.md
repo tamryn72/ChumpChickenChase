@@ -2,6 +2,31 @@
 
 > Chronological log of what has shipped. Newest first. Format: `YYYY-MM-DD — [Milestone] — summary`.
 
+## 2026-04-15 — M14 — Comedy payload (Executive Clucks + Red Fox minions)
+
+The last wishlist milestone — Chump starts signing executive orders after each first catch and his four-flavor comedy layer finally lands. Game is effectively v1 content-complete after this.
+
+- `src/main.js` — new `beginSigning(g)` picks a random order from `EXEC_ORDERS = ['speed', 'supersonic', 'foxes', 'tropical']`, activates order-specific side effects (`p.inputDelay = true` for speed, `supersonicCooldown = 60` for supersonic, `spawnDirectiveFoxes(g)` for foxes, no-op for tropical which hooks into `maybeThrowEgg`), bumps cumulative `save.ordersSeen[picked] = true`, persists the save, fires `playSfx('exec_order')`, and calls `setState(g, 'SIGNING')`. Signing ceremony is a new game state between GOTCHA and the next CHASE, 32 ticks long, skippable with Enter/Space/tap.
+- `src/main.js GOTCHA tick` — after the usual 15-tick GOTCHA, checks: if catches ≥ needed → escape; else if `!execOrderSigned` → `beginSigning()`; else → normal respawn. Order signs on **first catch only**.
+- `src/main.js` — per-CHASE-tick exec effects: supersonic cooldown ticks + triggers slow-mo when player is within 6 tiles, fox tick loop with contact stagger-stun, ice tint decay. New `EXEC_ORDER_INFO` (title / tagline / lines / hudLabel) used by both the signing ceremony and the HUD indicator.
+- `src/main.js loadWorld` — new exec-order reset: `execOrder = null`, `execOrderSigned = false`, `signingT = 0`, `supersonicCooldown = 0`, `iceTint = 0`, `foxes.length = 0`.
+- `src/main.js chumpHooks` — new `spawnIce(fc, fr, tc, tr)` hook.
+- `src/main.js tickProjectiles` — handles `p.kind === 'ice'` with a 20-tick freeze stun, `g.iceTint = 22` on hit, `playSfx('ice_hit'/'ice_splat')`.
+- `src/main.js CHASE taunt` — if `execOrder` is set, 50% of taunts pull from `EXEC_TAUNTS[order]` instead of the base `TAUNTS` pool.
+- `src/main.js drawIceTint` — pale-blue full-screen overlay fading from alpha 0.45 → 0 over 22 ticks. Drawn between world render and menu overlays.
+- `src/entities/fox.js` *(new)* — `createFox(col, row)` + `tickFox(fox, level, rng, player)` + `foxPixelPos(fox, alpha)`. Simple AI: pick the walkable neighbor with the smallest manhattan distance to the player (plus a small rng jitter so foxes don't all overlap), step there every 3 ticks, flag contact when manhattan ≤ 1. On contact, enter 10-tick recoil + bounce back one tile to avoid camping. No health — traps don't affect foxes; they clear when the level resets.
+- `src/entities/player.js` — new `inputDelay` / `queuedDir` fields and `supersonicSlow` counter. `tickPlayer` reads input via the 1-tick queue when `inputDelay` is set. `movePace` returns 8 (4× slow) when `supersonicSlow > 0`. `supersonicSlow` ticks down each frame.
+- `src/entities/chicken.js` — `maybeThrowEgg` has a new branch: if `ctx.execOrder === 'tropical'` and `rng.chance(0.5)`, call `hooks.spawnIce` instead of `hooks.spawnEgg`. Also exports `EXEC_TAUNTS` object with 4 lines per flavor.
+- `src/entities/projectile.js` — new `createIce(fc, fr, tc, tr)` returns `{ kind: 'ice', ... }` with the same 12-tick flight path as eggs. `tickProjectile` and `projectilePixelPos` already generic for egg-like arcs, so no changes needed there.
+- `src/render/sprites.js` — new `drawFox0` / `drawFox1` (16×16 orange body, red pointy hat with white band, red glowing eye, tipped tail, 2-frame leg cycle) and `drawIceCube` (8×8 pale blue cube with darker outline + white highlight).
+- `src/render/bake.js` — bakes `fox_0` / `fox_1` / `ice_cube`.
+- `src/render/renderer.js` — new `drawFoxes(ctx, foxes, alpha)` draws a pulsing red-eye glow halo + the fox sprite. Foxes added to the row-sorted entity draw list alongside townies. `drawPlayer` gained a Supersonic Order pulse effect: pale blue pulsing ring + interior tint while `p.supersonicSlow > 0`. `drawProjectiles` routes `p.kind === 'ice'` to the frost halo + `ice_cube` sprite path.
+- `src/render/menu.js drawSigning(ctx, game)` — full signing ceremony render. Parchment scroll slides in from the right over 8 ticks, rolled end caps, header ("EXECUTIVE CLUCK"), large red order title, italic tagline, 2 description lines. Red "SIGNED" stamp slams down at `elapsed=18` growing from 2.2× → 1.0× scale. Chump sprite stands to the left dipping his beak. Skippable with "ENTER / tap to skip" hint.
+- `src/render/ui.js` — new `EXEC_ORDER_HUD` label map. `drawHUD` renders a small orange order indicator directly under the catches counter when `game.execOrder` is set.
+- `src/audio/sfx.js` — 5 new effects: `exec_order` (bass stamp thump + two-note melody), `supersonic` (descending sine zing), `ice_throw` (high triangle sweep), `ice_hit` (highpass crackle + descending triangle), `ice_splat` (highpass noise). All tuned into the same 3-tier peak gain scheme as the M13 audio pass.
+- `src/systems/save.js` — `ordersSeen: { speed, supersonic, foxes, tropical }` added to `DEFAULT_SAVE`. Nested-merge path in `loadSave` picks it up. `cloneDefault` also copies it. Cumulative across all runs.
+- `src/render/menu.js drawScore` — new "EXEC CLUCKS SEEN: X/4" row counting trues in `save.ordersSeen`. Gives the player a reason to replay.
+
 ## 2026-04-15 — M13 — Ship pass (mobile touch, menu juice, audio v2, food-truck polish)
 
 Closing out every remaining M13 box and landing the small food-truck items on the way out.
