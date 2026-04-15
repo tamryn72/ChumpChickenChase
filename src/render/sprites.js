@@ -697,3 +697,88 @@ function cookBody(ctx, panic) {
 
 export function drawCookIdle(ctx)  { cookBody(ctx, false); }
 export function drawCookPanic(ctx) { cookBody(ctx, true);  }
+
+// ---------------------------------------------------------------------------
+// Red Fox minion (Executive Cluck — Red Foxes Directive) — 16x16
+// ---------------------------------------------------------------------------
+
+function foxBody(ctx, legFrame) {
+  // tail (back, darker orange)
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(1, 10, 3, 2);
+  ctx.fillRect(0, 9,  2, 2);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(0, 8, 2, 2);
+  // body
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(3, 9, 9, 4);
+  ctx.fillStyle = P.orange;
+  ctx.fillRect(3, 9, 9, 1);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(3, 12, 9, 1);
+  // head
+  ctx.fillStyle = P.chumpOrange;
+  ctx.fillRect(10, 5, 5, 5);
+  // ears (pointed)
+  ctx.fillRect(10, 4, 1, 2);
+  ctx.fillRect(14, 4, 1, 2);
+  ctx.fillStyle = P.chumpDeep;
+  ctx.fillRect(10, 3, 1, 1);
+  ctx.fillRect(14, 3, 1, 1);
+  // red pointy hat (MAGA-hat vibe — low brim + peak)
+  ctx.fillStyle = P.red;
+  ctx.fillRect(10, 2, 5, 2);
+  ctx.fillRect(9,  3, 1, 1);
+  ctx.fillRect(15, 3, 1, 1);
+  // hat band (white)
+  ctx.fillStyle = P.white;
+  ctx.fillRect(10, 4, 5, 1);
+  // red eye
+  ctx.fillStyle = P.red;
+  ctx.fillRect(13, 7, 1, 1);
+  // snout + nose
+  ctx.fillStyle = P.black;
+  ctx.fillRect(15, 8, 1, 1);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(14, 9, 2, 1);
+  // legs
+  ctx.fillStyle = P.chumpDeep;
+  if (legFrame === 0) {
+    ctx.fillRect(4, 13, 1, 2);
+    ctx.fillRect(7, 13, 1, 2);
+    ctx.fillRect(10, 13, 1, 2);
+  } else {
+    ctx.fillRect(5, 13, 1, 2);
+    ctx.fillRect(8, 13, 1, 2);
+    ctx.fillRect(11, 13, 1, 2);
+  }
+  // paws
+  ctx.fillStyle = P.black;
+  if (legFrame === 0) {
+    ctx.fillRect(4, 15, 1, 1);
+    ctx.fillRect(7, 15, 1, 1);
+    ctx.fillRect(10, 15, 1, 1);
+  } else {
+    ctx.fillRect(5, 15, 1, 1);
+    ctx.fillRect(8, 15, 1, 1);
+    ctx.fillRect(11, 15, 1, 1);
+  }
+}
+
+export function drawFox0(ctx) { foxBody(ctx, 0); }
+export function drawFox1(ctx) { foxBody(ctx, 1); }
+
+// Ice cube projectile (Tropical Order) — 8x8
+export function drawIceCube(ctx) {
+  // pale blue cube with darker outline and white highlight
+  ctx.fillStyle = '#29adff';
+  ctx.fillRect(1, 1, 6, 6);
+  ctx.fillStyle = '#1d5fa8';
+  ctx.fillRect(0, 0, 8, 1);
+  ctx.fillRect(0, 7, 8, 1);
+  ctx.fillRect(0, 0, 1, 8);
+  ctx.fillRect(7, 0, 1, 8);
+  ctx.fillStyle = P.white;
+  ctx.fillRect(2, 2, 2, 1);
+  ctx.fillRect(2, 3, 1, 1);
+}

@@ -119,6 +119,22 @@ Goal: load Farm tilemap, move player around, see something on a real canvas.
 - [x] Final catch → `VOLCANO_VICTORY` cutscene (player hoists chump, confetti)
 - [x] Final **GAME COMPLETE** score screen + R to PLAY AGAIN
 
+## M14 — Comedy payload  *(shipped)*
+
+Executive Clucks + Red Fox minions. The last "make it feel like Chump" layer.
+
+- [x] Executive Cluck signing ceremony — parchment scroll slides in, big red SIGNED stamp, Chump dips his beak, 32-tick duration, skippable.
+- [x] New SIGNING game state between GOTCHA and the next CHASE, fires on **first catch of the level only**. Order clears on level end.
+- [x] **Order for Speed** — player inputs queue one tick late. `p.inputDelay` flag in `player.js`, `p.queuedDir` stores the previous tick's direction.
+- [x] **Supersonic Order** — Chump triggers 20-tick slow-mo on the player when they're within 6 tiles, 140-tick cooldown. `p.supersonicSlow` drops movePace to 8 (4× slow). Pale blue pulsing ring around the player while active.
+- [x] **Red Foxes Directive** — spawns 3 red-hatted fox minions (`src/entities/fox.js`). AI walks toward the player every 3 ticks, stagger-stuns (5 ticks) on contact, bounces back one tile so they don't camp. No health, clear on level end.
+- [x] **Tropical Order** — Chump's egg-throw has a 50/50 chance to launch ice cubes instead. Direct hit freezes player for 20 ticks. Pale blue screen tint on impact.
+- [x] HUD indicator showing the active order (top-left strip under catches counter).
+- [x] Order-flavored taunts — 4 per flavor in `EXEC_TAUNTS`. During CHASE with an order active, 50% of taunts pull from the order-flavored pool.
+- [x] Cumulative `save.ordersSeen` tracking + "EXEC CLUCKS SEEN: X/4" line on the SCORE screen.
+- [x] New SFX: `exec_order` (ceremonial thump), `supersonic`, `ice_throw`, `ice_hit`, `ice_splat`.
+- [x] New sprites: `fox_0` / `fox_1` (16×16 red-hat minion with red eye), `ice_cube` (8×8 pale-blue cube projectile).
+
 ## M13 — Polish pass  *(shipped)*
 
 - [x] Mobile touch d-pad + trap palette  *(virtual d-pad + pause + GO + tappable trap strip; touch-action:none on canvas; all menus tap-routed)*
@@ -139,43 +155,20 @@ Goal: load Farm tilemap, move player around, see something on a real canvas.
 ## Future upgrades (user wishlist — not scheduled yet)
 
 Comedy / mechanics parked here, to be wired in once the base game is stable.
+**Most of the wishlist landed in M14. Only the arctic level is still parked.**
 
-### Executive Clucks — "I am hereby signing an order"
+### ~~Executive Clucks~~ *(shipped in M14)*
 
-Once per level, AFTER being caught, Chump issues a new "executive order" that
-makes him harder to catch for the rest of that level. Each order is named the
-**opposite of its actual effect** because Chump is not a reliable narrator.
-Big ceremonial UI: paper scroll slides onto screen, stamp sound, text reads
-"EXECUTIVE CLUCK — ORDER FOR [NAME]", Chump signs it with his beak.
+Shipped with adjustments from the original pitch:
+- **One order per level** (not one per catch — no stacking, clears on level end)
+- **Order for Speed** reworked as "inputs queue one tick late" instead of 2-second blocking delay (the original design would have compounded across stacked catches into an unplayable input lag)
+- **Icy Executive Cluck** renamed **Tropical Order** to match the "opposite of effect" naming convention the other two flavors already had
+- **Signed on the first catch only** — subsequent catches in the same level use the existing flow
+- All four flavors live — Speed, Supersonic, Red Foxes Directive, Tropical
 
-Pool of possible orders (one is randomly picked after each catch):
+### ~~Red Fox Minions~~ *(shipped in M14)*
 
-- **Order for Speed** — the player now has a 2-second delay before any
-  movement input registers. "For efficiency reasons."
-- **Supersonic Order** — an on-demand slow-mo ability Chump can activate
-  that drops the player's movement to 25% speed for 2 seconds. Chump can
-  pop this whenever he wants.
-- **Red Foxes Directive** — spawns 2-3 **red-eyed, red-hatted fox minions**
-  on the map. They don't directly attack, they just get in the player's
-  way and trip them (short stagger stun on contact).
-- **Icy Executive Cluck** — Chump can now throw **ice cubes** instead of
-  (or alongside) eggs. Ice cubes freeze the player in place for 2 seconds
-  on direct hit. Screen tints pale blue briefly on impact.
-
-Once an order is signed it stays active for the rest of the level, stacking
-with any previous orders from earlier catches. Multiple catches = multiple
-orders. Escalating absurdity.
-
-### Red Fox Minions
-
-Chump can call in his "Red Foxes" as a helper mob (from the directive above,
-or as a standalone summon from his base AI when rage is high).
-
-- Red eyes, red little hats, orange fur, 16×16 sprites
-- 2-frame wander/run anim, not very smart
-- Roam toward the player and stagger them on contact
-- Can be dispatched with a trap or just avoided
-- "It's the Red Foxes, folks. Very red. Very fox."
+Shipped as part of the Red Foxes Directive. 16×16 procedural sprite with red pointy hat and glowing red eye. Basic AI: move toward player every 3 ticks, contact = 5-tick stagger-stun, bounce back one tile on contact. Not dispatchable — just avoidable. Cleared on level end.
 
 ### Arctic / Ice level
 

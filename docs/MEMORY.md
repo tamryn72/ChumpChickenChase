@@ -18,7 +18,13 @@ Things that landed firmly — not locked forever, but these are our real directi
 - **M13 shipped**. Two passes.
   - *Polish pass (2026-04-14)*: procedural Web Audio SFX (`src/audio/sfx.js`), settings persisted to save, menu settings column, in-chase pause overlay (ESC/P), `tools/build.mjs` single-file bundler, reduced-motion + high-contrast. Details in `docs/TIMELINE.md`.
   - *Ship pass (2026-04-15)*: mobile touch (virtual d-pad, pause button, GO button, tappable trap palette strip — all menus tap-routed); title intro animation (Chump stomps in from off-screen right); diagonal orange wipe + banner on every state change; audio pass 2 (peak normalization + master volume slider 0..125% in settings); directional spit-fire particle burst when Chump eats a taco; cook NPC at the taco truck window on the Farm (screams + flails when Chump approaches).
-- **Wishlist nearly empty**. After M13 ship pass the remaining parked items are Executive Clucks + Red Fox minions (scheduled for the next milestone as the comedy payload) and a potential arctic / ice level variant (still deferred).
+- **M14 shipped (2026-04-15)**. **Comedy payload** — Executive Clucks + Red Fox minions. After the first catch of a level, Chump signs a random executive order during a 32-tick ceremony (parchment scroll slides in, SIGNED stamp, beak dip). Four flavors, one per level, clears on level end:
+  - **Order for Speed** — player inputs queue one tick late
+  - **Supersonic Order** — Chump triggers 20-tick slow-mo on the player when within 6 tiles (140-tick cooldown, pale blue pulse halo)
+  - **Red Foxes Directive** — spawns 3 red-hatted fox minions that stagger-stun on contact and bounce back
+  - **Tropical Order** — Chump's egg-throw has a 50/50 chance to become an ice cube that freezes for 2 seconds
+  - Order-flavored taunts fire ~50% of the time during CHASE. `save.ordersSeen` cumulative stat shown on the SCORE screen as "EXEC CLUCKS SEEN: X/4".
+- **Wishlist is empty.** The only parked item left is the arctic / ice level variant (still deferred). The base game is effectively content-complete for v1.
 
 ## New mechanic: Tacos & the Mexican food truck
 

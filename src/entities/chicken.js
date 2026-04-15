@@ -113,6 +113,35 @@ export function createChump(col, row) {
   };
 }
 
+// Executive Cluck flavor taunts — fired during CHASE while the matching
+// order is active. Chump is unreliable narrator; most of these are bragging.
+export const EXEC_TAUNTS = {
+  speed: [
+    'for efficiency reasons',
+    'everyone is saying i am fast',
+    'the experts agree',
+    'tremendous speed. tremendous.',
+  ],
+  supersonic: [
+    'going supersonic, folks',
+    'big-league speed',
+    "speed you've never seen",
+    'believe me. very fast.',
+  ],
+  foxes: [
+    'ITS THE RED FOXES',
+    'very red. very fox.',
+    'nobody makes foxes like me',
+    'tremendous fox, that one',
+  ],
+  tropical: [
+    'beautiful weather',
+    'so warm, isnt it',
+    'the tropical order is working',
+    "they said i couldn't freeze the player. LOSERS",
+  ],
+};
+
 export const TELEPORT_BUBBLES = [
   'BLINK',
   'see ya',
@@ -319,6 +348,11 @@ function maybeThrowEgg(c, ctx) {
   if (dist < 2 || dist > 7) return;
   c.facing = facingFromTo(c.col, c.row, player.col, player.row);
   c.eggCooldown = 40 + rng.int(0, 20);
+  // Tropical Order — 50% chance to launch an ice cube instead of an egg.
+  if (ctx.execOrder === 'tropical' && rng.chance(0.5)) {
+    hooks.spawnIce?.(c.col, c.row, player.col, player.row);
+    return;
+  }
   // World-level flag: W5 makes every thrown egg a flaming egg.
   const fiery = ctx.flamingEggs === true;
   hooks.spawnEgg?.(c.col, c.row, player.col, player.row, fiery);

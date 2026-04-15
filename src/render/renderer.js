@@ -9,6 +9,7 @@ import { buildingBoundingBox } from '../entities/building.js';
 import { projectilePixelPos } from '../entities/projectile.js';
 import { pickupPixelPos } from '../entities/pickup.js';
 import { towniePixelPos } from '../entities/npc.js';
+import { foxPixelPos } from '../entities/fox.js';
 import { drawGoo, drawFeathers } from '../systems/particles.js';
 import { drawBubbles } from '../systems/bubbles.js';
 import { drawHUD, drawPlaceCursor } from './ui.js';
@@ -134,6 +135,22 @@ function drawPickups(ctx, pickups, alpha) {
   }
 }
 
+function drawFoxes(ctx, foxes, alpha) {
+  for (const f of foxes) {
+    const { x, y } = foxPixelPos(f, alpha);
+    // red eye glow halo so they read as threats
+    ctx.save();
+    ctx.globalAlpha = 0.35 + Math.sin((f.moveT + alpha) * 0.8) * 0.1;
+    ctx.fillStyle = P.red;
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 16, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    const key = `fox_${f.animFrame}`;
+    cache.draw(ctx, key, x + 8, y + 8);
+  }
+}
+
 function drawTownies(ctx, townies, alpha) {
   for (const n of townies) {
     const { x, y } = towniePixelPos(n, alpha);
@@ -158,6 +175,23 @@ function drawPlayer(ctx, p, alpha) {
     ctx.arc(x + 16, y + 16, 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+  }
+  // Supersonic slow-mo — pale blue pulsing ring around the player
+  if (p.supersonicSlow > 0) {
+    const t = p.supersonicSlow / 20;
+    ctx.globalAlpha = 0.35 + Math.sin(p.supersonicSlow * 0.6) * 0.2;
+    ctx.strokeStyle = P.blue;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 16, 14 + (1 - t) * 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = P.blue;
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 16, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1;
   }
   const key = PLAYER_KEYS[p.facing][p.animFrame];
   if (p.stunTicks > 0 && p.stunTicks % 2 === 0) {
@@ -308,6 +342,18 @@ function drawProjectiles(ctx, projectiles, alpha) {
       ctx.globalAlpha = 1;
     }
 
+    if (p.kind === 'ice') {
+      // pale-blue frost halo under the cube
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = P.blue;
+      ctx.beginPath();
+      ctx.arc((pos.x | 0), (pos.y | 0), 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      cache.draw(ctx, 'ice_cube', (pos.x | 0) - 4, (pos.y | 0) - 4);
+      continue;
+    }
+
     cache.draw(ctx, 'egg', (pos.x | 0) - 4, (pos.y | 0) - 4);
   }
 }
@@ -350,6 +396,9 @@ export function render(ctx, game, alpha) {
   if (game.townies) {
     for (const n of game.townies) entities.push({ kind: 'townie', e: n });
   }
+  if (game.foxes) {
+    for (const f of game.foxes) entities.push({ kind: 'fox', e: f });
+  }
   if (game.player) entities.push({ kind: 'player', e: game.player });
   if (game.chump)  entities.push({ kind: 'chump',  e: game.chump });
   entities.sort((a, b) => a.e.row - b.e.row);
@@ -357,6 +406,7 @@ export function render(ctx, game, alpha) {
     if (ent.kind === 'player') drawPlayer(ctx, ent.e, alpha);
     else if (ent.kind === 'chump') drawChump(ctx, ent.e, alpha);
     else if (ent.kind === 'townie') drawTownies(ctx, [ent.e], alpha);
+    else if (ent.kind === 'fox') drawFoxes(ctx, [ent.e], alpha);
   }
 
   if (game.projectiles) drawProjectiles(ctx, game.projectiles, alpha);

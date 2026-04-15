@@ -192,6 +192,25 @@ const EFFECTS = {
     setTimeout(() => sweep(880, 520, 0.1, 'sawtooth', 0.18), 110);
   },
 
+  // Executive Cluck — ceremonial stamp thump during signing
+  exec_order: () => {
+    noise(0.08, 'lowpass', 260, 0.34);
+    setTimeout(() => beep(220, 0.14, 'triangle', 0.26), 60);
+    setTimeout(() => beep(330, 0.18, 'square',   0.24), 140);
+  },
+  // Supersonic Order — high-pitched descending zing
+  supersonic: () => {
+    sweep(1800, 400, 0.22, 'sine', 0.24);
+    setTimeout(() => sweep(900, 220, 0.14, 'triangle', 0.20), 80);
+  },
+  // Ice cube throw + hit + splat
+  ice_throw: () => sweep(320, 720, 0.08, 'triangle', 0.22),
+  ice_hit:   () => {
+    noise(0.14, 'highpass', 2200, 0.24);
+    sweep(860, 160, 0.18, 'triangle', 0.22);
+  },
+  ice_splat: () => noise(0.10, 'highpass', 1400, 0.20),
+
   final_form: () => { sweep(120, 60, 0.4, 'sawtooth', 0.36); noise(0.35, 'highpass', 800, 0.22); },
   teleport:   () => sweep(1600, 300, 0.18, 'sine', 0.24),
 

@@ -6,7 +6,7 @@ import {
 import { createRng } from './rng.js';
 import { bakeAll } from './render/bake.js';
 import { render } from './render/renderer.js';
-import { drawMenu, drawScore, drawPause, drawTransition } from './render/menu.js';
+import { drawMenu, drawScore, drawPause, drawTransition, drawSigning } from './render/menu.js';
 import { drawCutscene } from './render/cutscene.js';
 import { getWorldDef, WORLD_ORDER } from './world/index.js';
 import { TILE_TYPES as T } from './world/level.js';
@@ -16,15 +16,16 @@ import {
   TAUNTS, STUN_BUBBLES, ESCAPE_BUBBLES, DESTROY_BUBBLES,
   EGG_BUBBLES, FINAL_FORM_BUBBLES,
   CAT_BUBBLES, TACO_HATE_BUBBLES, BURGER_BUBBLES,
-  TELEPORT_BUBBLES,
+  TELEPORT_BUBBLES, EXEC_TAUNTS,
 } from './entities/chicken.js';
 import { createTrap, TRAP_TYPES, findTrapAt } from './entities/trap.js';
 import { destroyBuilding, allBuildingsDestroyed } from './entities/building.js';
-import { createEgg, createRock, tickProjectile } from './entities/projectile.js';
+import { createEgg, createIce, createRock, tickProjectile } from './entities/projectile.js';
 import {
   createPickup, tickPickup, pickupAt, PICKUP_TYPES,
 } from './entities/pickup.js';
 import { createTownie, tickTownie } from './entities/npc.js';
+import { createFox, tickFox } from './entities/fox.js';
 import {
   createParticles, tickParticles, addGoo, addFeather,
   addDebrisBurst, addAttackSpark, addEggSplat, addSpitFire, setMotionScale,
@@ -87,6 +88,107 @@ function freshStats() {
     tacosPlayer:  0,
     tacosChump:   0,
   };
+}
+
+// --- Executive Cluck — once-per-level comedy order signed after first catch
+//
+// Four flavors, picked at random on the first catch:
+//   speed      — player inputs queue one tick late ("for efficiency reasons")
+//   supersonic — Chump can trigger slow-mo on the player on cooldown
+//   foxes      — 3 red-hatted fox minions spawn and stagger-stun on contact
+//   tropical   — Chump throws ice cubes that freeze the player for 2 seconds
+//
+// All names are opposite-of-effect because Chump is an unreliable narrator.
+const EXEC_ORDERS = ['speed', 'supersonic', 'foxes', 'tropical'];
+const SIGNING_LEN = 32;
+
+export const EXEC_ORDER_INFO = {
+  speed: {
+    title: 'ORDER FOR SPEED',
+    tagline: 'for efficiency reasons',
+    lines: ['player inputs now queue', 'one tick late, believe me'],
+    hudLabel: 'ORDER: SPEED',
+  },
+  supersonic: {
+    title: 'SUPERSONIC ORDER',
+    tagline: 'going supersonic, folks',
+    lines: ['chump can trigger slow-mo', 'on the player at will'],
+    hudLabel: 'ORDER: SUPERSONIC',
+  },
+  foxes: {
+    title: 'RED FOXES DIRECTIVE',
+    tagline: 'very red, very fox',
+    lines: ['three fox minions appear', 'to stagger the player'],
+    hudLabel: 'ORDER: RED FOXES',
+  },
+  tropical: {
+    title: 'TROPICAL ORDER',
+    tagline: 'beautiful weather, really',
+    lines: ['chump now throws ice cubes', 'that freeze on a direct hit'],
+    hudLabel: 'ORDER: TROPICAL',
+  },
+};
+
+const ORDER_SIGNED_BUBBLES = {
+  speed:      ['EVERYONE AGREES', 'BEST ORDER EVER', 'for efficiency'],
+  supersonic: ['GOING SUPERSONIC', 'believe me, fast', 'BIG-LEAGUE SPEED'],
+  foxes:      ['the red foxes', 'VERY FOX', 'tremendous foxes'],
+  tropical:   ['such nice weather', 'TROPICAL VIBES', 'warming up'],
+};
+
+function pickExecOrder(rng) {
+  return rng.pick(EXEC_ORDERS);
+}
+
+function spawnDirectiveFoxes(g) {
+  const L = g.level;
+  let placed = 0;
+  for (let attempt = 0; attempt < 80 && placed < 3; attempt++) {
+    const c = g.rng.int(1, L.w - 2);
+    const r = g.rng.int(1, L.h - 2);
+    if (!L.isWalkable(c, r)) continue;
+    if (manhattan({ col: c, row: r }, g.player) < 4) continue;
+    // don't spawn on an existing entity tile
+    if (g.foxes.some((f) => f.col === c && f.row === r)) continue;
+    g.foxes.push(createFox(c, r));
+    placed += 1;
+  }
+}
+
+function beginSigning(g) {
+  const picked = pickExecOrder(g.rng);
+  g.execOrder = picked;
+  g.execOrderSigned = true;
+  g.signingT = SIGNING_LEN;
+
+  // order-specific activation
+  if (picked === 'speed') {
+    g.player.inputDelay = true;
+  } else if (picked === 'supersonic') {
+    g.supersonicCooldown = 60; // 6s warmup before first slow-mo
+  } else if (picked === 'foxes') {
+    spawnDirectiveFoxes(g);
+  } else if (picked === 'tropical') {
+    // no immediate state change — hook into maybeThrowEgg via ctx.execOrder
+  }
+
+  // persistent cumulative stat in save.ordersSeen — used by the score screen
+  g.save.ordersSeen = g.save.ordersSeen || {};
+  g.save.ordersSeen[picked] = true;
+  saveSave(g.save);
+
+  playSfx('exec_order');
+  setState(g, 'SIGNING');
+  say(g.bubbles, g.chump, g.rng.pick(ORDER_SIGNED_BUBBLES[picked]), 'exec', 60, 40);
+}
+
+function tickSigning(g) {
+  g.signingT -= 1;
+  if (input.wasPressed('Enter') || input.wasPressed('Space') || g.signingT <= 0) {
+    g.signingT = 0;
+    respawnChumpFarFromPlayer();
+    setState(g, 'CHASE');
+  }
 }
 
 // --- menu juice / state transitions -----------------------------------------
@@ -153,6 +255,13 @@ const game = {
   // menu juice / transition counters
   menuIntroT: 0,
   transitionT: 0,
+  // Executive Cluck state — set by the signing ceremony, cleared on level end
+  execOrder: null,          // null | 'speed' | 'supersonic' | 'foxes' | 'tropical'
+  execOrderSigned: false,   // has a signing happened this level?
+  signingT: 0,              // ticks remaining in the signing ceremony
+  supersonicCooldown: 0,    // ticks until Chump can trigger supersonic again
+  iceTint: 0,               // blue screen tint timer (ice-cube hits)
+  foxes: [],                // red fox minion entities (Red Foxes Directive)
 };
 
 function loadWorld(num) {
@@ -178,6 +287,13 @@ function loadWorld(num) {
   game.pickupTimers = { taco: 120, burger: 180, cat: 240 };
   game.rockTimer = 60;
   game.shake = 0;
+  // Executive Cluck reset — orders don't carry across levels
+  game.execOrder       = null;
+  game.execOrderSigned = false;
+  game.signingT        = 0;
+  game.supersonicCooldown = 0;
+  game.iceTint         = 0;
+  game.foxes.length    = 0;
   game.planTimer     = def.planTimer;
   game.chaseTimer    = def.chaseTimer;
   game.catches       = 0;
@@ -379,6 +495,10 @@ const chumpHooks = {
     game.projectiles.push(createEgg(fc, fr, tc, tr, fiery));
     playSfx('egg_throw');
   },
+  spawnIce: (fc, fr, tc, tr) => {
+    game.projectiles.push(createIce(fc, fr, tc, tr));
+    playSfx('ice_throw');
+  },
   sayEgg: (c) => say(game.bubbles, c, game.rng.pick(EGG_BUBBLES), 'egg', 40, 22),
   onFinalForm: (c) => {
     say(game.bubbles, c, game.rng.pick(FINAL_FORM_BUBBLES), 'finalform', 120, 40);
@@ -557,6 +677,11 @@ function handleTouchStart(x, y) {
   }
 
   if (game.state === 'SCORE') {
+    input.injectPress('Enter');
+    return 'enter';
+  }
+
+  if (game.state === 'SIGNING') {
     input.injectPress('Enter');
     return 'enter';
   }
@@ -807,21 +932,28 @@ function tickProjectiles(g) {
       continue;
     }
 
-    // eggs
+    // eggs + ice cubes
     const d = Math.abs(g.player.col - p.targetCol) + Math.abs(g.player.row - p.targetRow);
     const fiery = p.kind === 'egg_fiery';
+    const ice   = p.kind === 'ice';
     if (d <= 1 && g.player.stunTicks === 0) {
-      g.player.stunTicks = fiery ? 8 : 5;
-      addShake(fiery ? 18 : 14);
+      g.player.stunTicks = ice ? 20 : (fiery ? 8 : 5);
+      addShake(ice ? 12 : (fiery ? 18 : 14));
       addRage(g.chump, 5);
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
       g.stats.eggsHit += 1;
-      say(g.bubbles, g.chump, fiery ? 'ROAST' : 'DIRECT HIT', 'egg_hit', 20, 22);
-      playSfx('egg_hit');
+      if (ice) {
+        g.iceTint = 22;
+        say(g.bubbles, g.chump, 'FROZEN', 'egg_hit', 20, 22);
+        playSfx('ice_hit');
+      } else {
+        say(g.bubbles, g.chump, fiery ? 'ROAST' : 'DIRECT HIT', 'egg_hit', 20, 22);
+        playSfx('egg_hit');
+      }
     } else {
       addEggSplat(g.particles, p.targetCol, p.targetRow, g.rng);
       g.stats.eggsDodged += 1;
-      playSfx('egg_splat');
+      playSfx(ice ? 'ice_splat' : 'egg_splat');
     }
     g.projectiles.splice(i, 1);
   }
@@ -916,6 +1048,7 @@ function tick(g) {
       player: g.player,
       cheats: g.worldDef?.cheats || [],
       flamingEggs: g.worldDef?.flamingEggs === true,
+      execOrder: g.execOrder,
     });
 
     for (const n of g.townies) {
@@ -928,6 +1061,34 @@ function tick(g) {
         say(g.bubbles, n, 'MY TACOS', 'cook_scream', 15, 24);
       }
     }
+
+    // --- Executive Cluck per-tick effects (only while an order is active)
+    if (g.execOrder === 'supersonic') {
+      if (g.supersonicCooldown > 0) g.supersonicCooldown -= 1;
+      if (g.supersonicCooldown === 0 && (g.player.supersonicSlow || 0) === 0) {
+        // trigger only if the player is in visible range and not stunned
+        if (manhattan(g.player, g.chump) <= 6 && g.player.stunTicks === 0) {
+          g.player.supersonicSlow = 20;
+          g.supersonicCooldown = 140;
+          playSfx('supersonic');
+          say(g.bubbles, g.chump, g.rng.pick([
+            'GOING SUPERSONIC', 'BIG-LEAGUE SPEED', 'believe me, fast',
+          ]), 'exec', 40, 24);
+        }
+      }
+    }
+    // Red Fox directive — tick each fox, apply stagger-stun on contact
+    for (const fox of g.foxes) {
+      const contact = tickFox(fox, g.level, g.rng, g.player);
+      if (contact && g.player.stunTicks === 0) {
+        g.player.stunTicks = 5;
+        addShake(6);
+        playSfx('player_hit');
+        say(g.bubbles, g.player, 'OOF', 'fox_hit', 12, 16);
+      }
+    }
+    // iceTint decays regardless of exec order (hit could still linger)
+    if (g.iceTint > 0) g.iceTint -= 1;
 
     tickPickups(g);
     if (g.worldDef?.fallingRocks) tickFallingRocks(g);
@@ -943,7 +1104,12 @@ function tick(g) {
     if (g.shake > 0) g.shake -= 1;
 
     if (manhattan(g.player, g.chump) <= 3 && g.chump.stunTicks === 0) {
-      say(g.bubbles, g.chump, g.rng.pick(TAUNTS), 'taunt', 70);
+      // Under an exec order, half the taunts pull from the order-flavored
+      // pool so Chump keeps bragging about his latest decree.
+      const pool = (g.execOrder && EXEC_TAUNTS[g.execOrder] && g.rng.chance(0.5))
+        ? EXEC_TAUNTS[g.execOrder]
+        : TAUNTS;
+      say(g.bubbles, g.chump, g.rng.pick(pool), 'taunt', 70);
     }
 
     if (g.chump.stunTicks > 0 && manhattan(g.player, g.chump) <= 1) {
@@ -973,11 +1139,18 @@ function tick(g) {
     if (g.gotchaTicks <= 0) {
       if (g.catches >= g.catchesNeeded) {
         enterEscapeCutscene();
+      } else if (!g.execOrderSigned) {
+        // first catch of the level — Chump signs an executive order
+        beginSigning(g);
       } else {
         respawnChumpFarFromPlayer();
         setState(g, 'CHASE');
       }
     }
+  } else if (g.state === 'SIGNING') {
+    tickSigning(g);
+    tickParticles(g.particles);
+    tickBubbles(g.bubbles);
   } else if (g.state === 'ESCAPE_CUTSCENE') {
     const skipping = input.wasPressed('Space') || input.wasPressed('Enter');
     const done = tickCutscene(g.cutscene);
@@ -1023,11 +1196,30 @@ function renderFrame(alpha) {
     return;
   }
   render(ctx, game, alpha);
+  drawIceTint(ctx);
   if (game.state === 'CHASE' && game.paused) {
     drawPause(ctx, game);
   }
+  // Transition draws before the signing ceremony so the scroll isn't
+  // obscured by the wipe during its slide-in.
   drawTransition(ctx, game);
+  if (game.state === 'SIGNING') {
+    drawSigning(ctx, game);
+  }
   drawAccessibilityOverlay(ctx);
+}
+
+// Fading pale-blue overlay — shown briefly after an ice-cube hit. Drawn
+// between the world and any menu/ceremony overlays.
+function drawIceTint(ctx) {
+  const t = game.iceTint || 0;
+  if (t <= 0) return;
+  const alpha = (t / 22) * 0.45;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#29adff';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.restore();
 }
 
 // High-contrast overlay: adds a faint border + darkens the edges so sprites

@@ -9,6 +9,15 @@ const DEFAULT_SAVE = {
   totalPlays: 0,
   gameComplete: false,  // set true once W5 is cleared
   clears: 0,            // how many times W5 has been beaten
+  // Executive Clucks seen across all runs — cumulative. Used by the score
+  // screen to show "EXECUTIVE CLUCKS SEEN: X/4" so the player knows there
+  // are more flavors to discover.
+  ordersSeen: {
+    speed:      false,
+    supersonic: false,
+    foxes:      false,
+    tropical:   false,
+  },
   settings: {
     muted:         false, // global SFX mute
     volume:        1.0,   // 0..1.25, multiplies the base master gain
@@ -29,7 +38,8 @@ export function loadSave() {
     const parsed = JSON.parse(raw);
     const merged = { ...cloneDefault(), ...parsed };
     // settings is nested, so merge individually to avoid losing new fields
-    merged.settings = { ...DEFAULT_SAVE.settings, ...(parsed.settings || {}) };
+    merged.settings   = { ...DEFAULT_SAVE.settings,   ...(parsed.settings   || {}) };
+    merged.ordersSeen = { ...DEFAULT_SAVE.ordersSeen, ...(parsed.ordersSeen || {}) };
     return merged;
   } catch (e) {
     return cloneDefault();
@@ -40,7 +50,8 @@ function cloneDefault() {
   return {
     ...DEFAULT_SAVE,
     bestStats: {},
-    settings: { ...DEFAULT_SAVE.settings },
+    settings:   { ...DEFAULT_SAVE.settings },
+    ordersSeen: { ...DEFAULT_SAVE.ordersSeen },
   };
 }
 

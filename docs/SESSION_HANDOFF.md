@@ -4,7 +4,85 @@
 
 ---
 
-## Last session — 2026-04-15 (M13 ship pass)
+## Last session — 2026-04-15 (M14 comedy payload)
+
+Executive Clucks + Red Fox minions shipped. This was the last wishlist milestone; the base game is effectively v1 content-complete. Branch `claude/comedy-payload`, based on `claude/m13-polish-ship-2fGFd`.
+
+### What's new
+
+**Signing ceremony + SIGNING state**. New game state between GOTCHA and CHASE. Triggers on the **first catch of a level only** — subsequent catches use the existing GOTCHA→CHASE flow. 32 ticks long, skippable with Enter/Space/tap. Parchment scroll slides in from the right over 8 ticks, Chump stands to the left dipping his beak, red "SIGNED" stamp slams down at elapsed=18 growing from 2.2× to 1.0×. Transition overlay is drawn *behind* the signing scroll so it doesn't obscure the slide-in.
+
+**Four executive order flavors**, picked at random each time the ceremony fires:
+
+- **Order for Speed** — `p.inputDelay = true` flips player input reading to a 1-tick queue. Each movement tick uses the previous tick's direction and then stores the current. Noticeable sluggishness, not broken.
+- **Supersonic Order** — `g.supersonicCooldown` starts at 60 (6s warmup). Every CHASE tick it ticks down; when it hits 0 and the player is within 6 tiles, Chump sets `p.supersonicSlow = 20` and resets the cooldown to 140. `movePace` returns 8 (4× slow) while the flag is nonzero. Blue pulsing halo around the player while active. Plays `supersonic` SFX on trigger.
+- **Red Foxes Directive** — `spawnDirectiveFoxes(g)` drops 3 foxes on random walkable tiles ≥ 4 manhattan from the player. Fox AI lives in `src/entities/fox.js` — moves every 3 ticks toward the player (with tiny rng jitter so they don't overlap), stagger-stuns on contact (5-tick stun, 10-tick recoil, bounces back one tile). No health, not dispatchable, cleared when the level resets.
+- **Tropical Order** — `maybeThrowEgg` in `chicken.js` checks `ctx.execOrder === 'tropical'` and rolls 50/50 to call `hooks.spawnIce` instead of `hooks.spawnEgg`. Ice cubes fly with the same parabolic arc as eggs but freeze the player for 20 ticks (2 sec) on direct hit. `g.iceTint = 22` draws a pale blue full-screen overlay that fades out over 22 ticks.
+
+**HUD indicator**. `drawHUD` renders a small orange "ORDER: SPEED/SUPERSONIC/RED FOXES/TROPICAL" badge directly under the CATCHES counter when `game.execOrder` is set.
+
+**Exec-flavored taunts**. `EXEC_TAUNTS` in `chicken.js` has 4 lines per flavor (e.g. "for efficiency reasons", "going supersonic, folks", "ITS THE RED FOXES", "beautiful weather"). The CHASE-tick taunt cooldown now pulls from the flavored pool ~50% of the time when an order is active.
+
+**Cumulative `save.ordersSeen`**. Nested-merged on `loadSave` (so old saves don't lose anything on upgrade). Four booleans. `drawScore` adds a new "EXEC CLUCKS SEEN: X/4" stat row that counts trues. Gives the player a reason to replay and see all four flavors.
+
+**New SFX** (5): `exec_order` (bass stamp thump + 2-note melody), `supersonic` (descending sine zing), `ice_throw` (high triangle sweep), `ice_hit` (highpass crackle + descending triangle), `ice_splat` (highpass noise). All tuned into the same 3-tier peak scheme as M13 audio pass.
+
+**New sprites**: `fox_0` / `fox_1` (16×16 orange body, red pointy hat with white band, red glowing eye, 2-frame leg cycle), `ice_cube` (8×8 pale blue cube with white highlight).
+
+### Design decisions locked in this session
+
+- **A1**: Signing triggers on the **first catch only**. One order per level, not per catch.
+- **B**: Foxes **persist through the whole level** (through catches 2-3, pause, etc.). Only clear on level end.
+- **C1**: Signing **hard-pauses** the game — no particles, no AI, no projectiles advance. Same treatment as GOTCHA.
+- **D**: Renamed **Icy Executive Cluck** → **Tropical Order** to match the "opposite of effect" naming convention. Red Foxes Directive kept on-the-nose (the joke is the blatantness).
+- **E**: Taunt lines locked as the ones I pitched (plus a few extras). 4 per flavor in `EXEC_TAUNTS`.
+- **F**: `ordersSeen` tracked cumulatively across all runs, shown on the SCORE screen. Not persisted per-run.
+
+### Files touched (branch `claude/comedy-payload`)
+
+- `src/entities/fox.js` *(new)*
+- `src/entities/player.js` *(input queue + supersonic slow)*
+- `src/entities/chicken.js` *(Tropical ice branch + EXEC_TAUNTS)*
+- `src/entities/projectile.js` *(createIce)*
+- `src/audio/sfx.js` *(5 new effects)*
+- `src/main.js` *(beginSigning, tickSigning, order effects, chumpHooks.spawnIce, iceTint render, ordersSeen save)*
+- `src/render/menu.js` *(drawSigning ceremony, EXEC CLUCKS SEEN score row)*
+- `src/render/renderer.js` *(drawFoxes, Supersonic pulse, ice-cube projectile)*
+- `src/render/sprites.js` *(drawFox0/1, drawIceCube)*
+- `src/render/bake.js` *(fox + ice_cube bakes)*
+- `src/render/ui.js` *(EXEC_ORDER_HUD indicator)*
+- `src/systems/save.js` *(ordersSeen nested merge)*
+- `docs/PLAN.md`, `docs/MEMORY.md`, `docs/TIMELINE.md`, `docs/SESSION_HANDOFF.md`, `CLAUDE.md`
+
+### Smoke + build
+
+- `node tools/smoke.mjs` → OK. Fox ticking isn't exercised directly (smoke doesn't go through main.js state machine), but all imports/exports resolve and the world sweep still passes.
+- `node tools/build.mjs` → `dist/index.html` at ~264 KB (up from 242 KB).
+- Bundle parses under `new Function(js)` — 0 leaked imports/exports.
+
+### Risks worth flagging
+
+- **Volume balance still headless.** I haven't heard any of the new SFX (exec_order thump, supersonic zing, ice effects). Ear-test on first playtest.
+- **Order for Speed feels sluggish at the movement-cycle granularity, not per-tick.** The player tick only reads input when `moveT >= pace`, so the queue effectively delays by one movement step (~200ms at BASE_MOVE_TICKS=2), not one game tick (100ms). Feels sluggish in practice. If it's too mild, I can tick the queue every game tick regardless.
+- **Red Fox AI is very simple.** They path by picking the walkable neighbor with min manhattan distance — no actual pathfinding. They can get stuck behind walls or oscillate. If that happens in playtest I'll upgrade them to BFS pathing. For now, simple is intentional.
+- **Supersonic cooldown + the signing ceremony are both timer-driven with no indication to the player.** After signing, the slow-mo can fire 6 seconds later with nothing warning. The blue pulse ring + SFX is the indication *as it happens*. Might want a "going supersonic…" warning bubble 1 tick before trigger — easy to add if it feels unfair.
+- **Foxes can spawn on the player's PLAN-phase position.** The 4-tile minimum manhattan check runs against the player's *current* position, which is fine — they won't spawn on top of you. But they can spawn on grass near the taco truck etc. where you're about to be. Not a bug, just a design note.
+- **Signing only fires once per level.** If you want more signings per run (e.g. one per catch with replacement, not stacking), that's a small change — grep `execOrderSigned` and gate differently.
+- **The regex bundler is still regex-based.** Same caveat every session: no `export default`, grep the bundle after changes.
+
+### Not yet in / parked
+
+The wishlist is empty. Only remaining items:
+
+- **Arctic / ice level variant** — still deferred. Could be W6 or a W5 sub-biome. No design pressure to ship.
+- **Taco trucks on W2-W5** — still a small gap; the Farm is the only world with a taco truck + cook.
+- **Performance audit** — still not needed.
+
+The base game is effectively **v1 content-complete**. Next direction is up to you: publish to GitHub Pages / itch.io, polish pass 3, new content milestone, or call it done.
+
+---
+
+## Previous session — 2026-04-15 (M13 ship pass)
 
 Closed out every M13 box that was still open, plus the two food-truck wishlist items on the way out. Branch `claude/m13-polish-ship-2fGFd`. Everything smoke- and build-verified; no real browser playtest from this side.
 

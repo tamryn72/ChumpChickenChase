@@ -127,4 +127,11 @@ export function bakeAll() {
   // --- cook NPC (16x16) — stands at the taco truck window ---
   cache.bake('cook_idle',  16, 16, sprites.drawCookIdle);
   cache.bake('cook_panic', 16, 16, sprites.drawCookPanic);
+
+  // --- red fox minion (16x16) — Executive Cluck Red Foxes Directive ---
+  cache.bake('fox_0', 16, 16, sprites.drawFox0);
+  cache.bake('fox_1', 16, 16, sprites.drawFox1);
+
+  // --- ice cube projectile (8x8) — Tropical Order ---
+  cache.bake('ice_cube', 8, 8, sprites.drawIceCube);
 }

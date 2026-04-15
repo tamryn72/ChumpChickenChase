@@ -46,7 +46,7 @@ Add `?debug=1` to the URL for dev overlays (grid, AI state, rage meter, pathfind
 
 ## Current branch
 
-`claude/m13-polish-ship-2fGFd`
+`claude/comedy-payload`
 
 ## Code conventions (current)
 

@@ -17,6 +17,20 @@ export function createEgg(fromCol, fromRow, targetCol, targetRow, fiery = false)
   };
 }
 
+// Ice cube — Tropical Order variant of egg. Same flight path, different
+// stun payload (2 seconds of freeze instead of a 5-tick jab).
+export function createIce(fromCol, fromRow, targetCol, targetRow) {
+  return {
+    kind: 'ice',
+    fromCol,
+    fromRow,
+    targetCol,
+    targetRow,
+    t: 0,
+    totalTicks: 12,
+  };
+}
+
 // A rock hazard "falls" from above onto targetCol/targetRow over totalTicks.
 // Source col/row is cosmetic (we use it only for the arc's start point).
 export function createRock(targetCol, targetRow) {

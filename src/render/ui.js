@@ -5,6 +5,13 @@ import * as cache from './sprite-cache.js';
 import { P } from './palette.js';
 import { TRAP_TYPES } from '../entities/trap.js';
 
+const EXEC_ORDER_HUD = {
+  speed:      'ORDER: SPEED',
+  supersonic: 'ORDER: SUPERSONIC',
+  foxes:      'ORDER: RED FOXES',
+  tropical:   'ORDER: TROPICAL',
+};
+
 const TRAP_LABEL = {
   [TRAP_TYPES.NET]:         '[1] NET',
   [TRAP_TYPES.BANANA]:      '[2] BAN',
@@ -44,6 +51,17 @@ export function drawHUD(ctx, game) {
   // catches (left)
   ctx.fillStyle = P.white;
   ctx.fillText(`CATCHES ${game.catches}/${game.catchesNeeded}`, 6, 11);
+
+  // exec-order indicator — sits just under the catches line when active
+  if (game.execOrder) {
+    const orderLabel = EXEC_ORDER_HUD[game.execOrder] || 'ORDER';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(4, 22, ctx.measureText(orderLabel).width + 10, 14);
+    ctx.fillStyle = P.chumpOrange;
+    ctx.font = 'bold 9px ui-monospace, monospace';
+    ctx.fillText(orderLabel, 8, 31);
+    ctx.font = 'bold 10px ui-monospace, monospace';
+  }
 
   // state + timer (center)
   ctx.textAlign = 'center';
