@@ -41,11 +41,20 @@ import { menuLayout, pauseMenuLayout } from './render/menu.js';
 import { input } from './input.js';
 
 // --- canvas + context ---
+// The canvas backing buffer is rendered at RENDER_SCALE× the logical game
+// resolution so that fillText (HUD, bubbles, menus) has enough physical
+// pixels to stay legible when the browser upscales the pixelated canvas to
+// fit the viewport. Sprites still look crisp because we keep
+// imageSmoothingEnabled=false — the ctx.scale() just turns each logical
+// pixel into RENDER_SCALE buffer pixels via nearest-neighbor drawImage.
+// All game code continues to work in logical (640×480) coordinates.
+const RENDER_SCALE = 2;
 const canvas = document.getElementById('game');
-canvas.width = CANVAS_W;
-canvas.height = CANVAS_H;
+canvas.width = CANVAS_W * RENDER_SCALE;
+canvas.height = CANVAS_H * RENDER_SCALE;
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
+ctx.scale(RENDER_SCALE, RENDER_SCALE);
 
 bakeAll();
 
@@ -143,7 +152,9 @@ function pickExecOrder(rng) {
 function spawnDirectiveFoxes(g) {
   const L = g.level;
   let placed = 0;
-  for (let attempt = 0; attempt < 80 && placed < 3; attempt++) {
+  // 2 foxes, not 3 — three simultaneously-chasing minions meant the player
+  // couldn't realistically escape once the directive was signed.
+  for (let attempt = 0; attempt < 80 && placed < 2; attempt++) {
     const c = g.rng.int(1, L.w - 2);
     const r = g.rng.int(1, L.h - 2);
     if (!L.isWalkable(c, r)) continue;
@@ -529,8 +540,11 @@ const chumpHooks = {
 // --- canvas mouse ---
 function canvasToGrid(e) {
   const rect = canvas.getBoundingClientRect();
-  const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-  const cy = (e.clientY - rect.top)  * (canvas.height / rect.height);
+  // Use logical canvas dimensions (CANVAS_W/H) not canvas.width/height —
+  // the backing buffer is RENDER_SCALE× larger than logical, but the game
+  // operates in logical coordinates.
+  const cx = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+  const cy = (e.clientY - rect.top)  * (CANVAS_H / rect.height);
   return { col: Math.floor(cx / TILE), row: Math.floor(cy / TILE) };
 }
 
@@ -560,9 +574,10 @@ const activeTouches = new Map(); // identifier -> { role, x, y }
 
 function touchPointToCanvas(t) {
   const rect = canvas.getBoundingClientRect();
+  // Logical coords — see canvasToGrid comment.
   return {
-    x: (t.clientX - rect.left) * (canvas.width / rect.width),
-    y: (t.clientY - rect.top)  * (canvas.height / rect.height),
+    x: (t.clientX - rect.left) * (CANVAS_W / rect.width),
+    y: (t.clientY - rect.top)  * (CANVAS_H / rect.height),
   };
 }
 
@@ -1077,11 +1092,13 @@ function tick(g) {
         }
       }
     }
-    // Red Fox directive — tick each fox, apply stagger-stun on contact
+    // Red Fox directive — tick each fox, apply stagger-stun on contact.
+    // Stun is intentionally short (3 ticks = 0.3s): long enough to feel
+    // like a real hit, short enough that two foxes can't chain-lock you.
     for (const fox of g.foxes) {
       const contact = tickFox(fox, g.level, g.rng, g.player);
       if (contact && g.player.stunTicks === 0) {
-        g.player.stunTicks = 5;
+        g.player.stunTicks = 3;
         addShake(6);
         playSfx('player_hit');
         say(g.bubbles, g.player, 'OOF', 'fox_hit', 12, 16);

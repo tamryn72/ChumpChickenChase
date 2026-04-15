@@ -1,15 +1,24 @@
 // Red Fox minion. Spawned by the Red Foxes Directive (Executive Cluck).
-// Simple AI: roam toward the player, stagger-stun on contact, bounce back a
-// tile so they don't camp. No health — traps don't affect them; they clear
-// when the level ends along with the directive.
+// Simple AI: roam toward the player, stagger-stun on direct collision, then
+// bounce back a tile so they don't camp. No health — traps don't affect
+// them; they clear when the level ends along with the directive.
 
 import { TILE } from '../config.js';
 import { FACE } from './player.js';
 
-const MOVE_TICKS = 3;
+// Foxes move slightly slower than the player (player = 2 ticks/tile) so the
+// directive is dangerous but not inescapable. With 3 foxes originally and a
+// 1-tile stun radius they could spam-stun the player forever; both were
+// tuned down (see main.js spawn count and the collision check below).
+const MOVE_TICKS = 4;
 
 const DX = [0, 1, 0, -1];
 const DY = [-1, 0, 1, 0];
+
+// Recoil keeps a fox from re-stunning the player in back-to-back moves.
+// Long enough that the player has time to actually escape before the fox
+// can land another hit.
+const RECOIL_TICKS = 22;
 
 export function createFox(col, row) {
   return {
@@ -25,12 +34,11 @@ export function createFox(col, row) {
   };
 }
 
-function manhattan(a, b) {
-  return Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
-}
-
-// Returns true if the fox is in a tile adjacent to (or on) the player this
-// tick and should apply a stagger-stun. Main.js handles the actual stun.
+// Returns true if the fox stepped onto the player's tile this tick and
+// should apply a stagger-stun. Main.js handles the actual stun. We only
+// trigger on a direct collision (same tile), not adjacency, so the player
+// can slip past a fox that's one tile away — previously the 1-tile radius
+// made the directive effectively inescapable with multiple foxes.
 export function tickFox(fox, level, rng, player) {
   if (fox.recoil > 0) fox.recoil -= 1;
   if (fox.moveT < MOVE_TICKS) fox.moveT += 1;
@@ -62,10 +70,11 @@ export function tickFox(fox, level, rng, player) {
   fox.moveT = 0;
   fox.animFrame = 1 - fox.animFrame;
 
-  // contact check: if now adjacent (or on) the player and not in recoil
-  if (fox.recoil === 0 && manhattan(fox, player) <= 1) {
-    fox.recoil = 10;
-    // bounce back one tile in the opposite direction (if walkable)
+  // Collision check: fox stepped onto the player's tile and isn't in recoil.
+  if (fox.recoil === 0 && fox.col === player.col && fox.row === player.row) {
+    fox.recoil = RECOIL_TICKS;
+    // bounce back one tile in the opposite direction (if walkable) so the
+    // fox isn't sitting on top of the player when the stun ends
     const bx = fox.col - DX[best];
     const by = fox.row - DY[best];
     if (level.isWalkable(bx, by)) {
