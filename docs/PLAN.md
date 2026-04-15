@@ -16,99 +16,97 @@
 - [x] `src/rng.js` — mulberry32
 - [x] `.gitignore`
 
-## M1 — Walking farmer
+## M1 — Walking farmer  *(shipped)*
 
-Goal: load Farm tilemap, move player around, see something on a real canvas.
+- [x] `config.js` — tile size, grid dims, tick rate
+- [x] `input.js` — keyboard (touch added in M13)
+- [x] Art pipeline — procedural sprites baked once at boot via `render/bake.js`
+- [x] `render/renderer.js` — clear, draw tiles, draw entities by z
+- [x] `world/level.js` — Level class with 2D tile array
+- [x] World 1 Farm static map — split out into `world/farm.js` (no shared `worlds.js`)
+- [x] `entities/player.js` — grid step, pixel interpolation, walkable check
+- [x] `main.js` — boot routing through MENU into CHASE
 
-- [ ] `config.js` — tile size, grid dims, tick rate
-- [ ] `input.js` — keyboard (touch later)
-- [ ] Art pipeline (whatever we land on in "Art approach" below)
-- [ ] `render/renderer.js` — clear, draw tiles, draw entities by z
-- [ ] `world/level.js` — Level class with 2D tile array
-- [ ] `world/worlds.js` — World 1 Farm static map (barn, fences, hay, coop, pond, scarecrow, tractor)
-- [ ] `entities/player.js` — grid step, pixel interpolation, walkable check
-- [ ] `main.js` — boot directly into CHASE with World 1 for dev
+## M2 — The chicken lives  *(shipped)*
 
-## M2 — The chicken lives
+- [x] `entities/chicken.js` — wander AI
+- [x] Orange goo trail
+- [x] Feather drops
+- [x] Chicken idle + run animation
+- [x] First speech bubble ("Quiet, piggy") on player proximity
 
-- [ ] `entities/chicken.js` — wander AI
-- [ ] Orange goo trail
-- [ ] Feather drops
-- [ ] Chicken idle + run animation (or emoji substitute)
-- [ ] First speech bubble ("Quiet, piggy") on player proximity
+## M3 — Two-phase level flow  *(shipped)*
 
-## M3 — Two-phase level flow
+- [x] State machine — MENU → PLAN → CHASE → GOTCHA → SCORE (no separate `state.js`; lives in `main.js`)
+- [x] Plan phase UI: trap palette, click-to-place
+- [x] Plan timer + Chase timer
+- [x] Catch mechanic
+- [x] Win (catches met) / lose (timer expired / all buildings destroyed) routing
 
-- [ ] `state.js` — MENU → PLAN → CHASE
-- [ ] Plan phase UI: trap palette, click-to-place
-- [ ] Plan timer + Chase timer
-- [ ] Catch mechanic stub
-- [ ] Win (catches met) / lose (timer expired) → GAMEOVER / CUTSCENE
+## M4 — Traps that actually work  *(shipped)*
 
-## M4 — Traps that actually work
+- [x] `entities/trap.js` — trap types + stun durations + lure set (no separate `trap-effects.js`; behavior lives in `chicken.js`)
+- [x] Net, Banana, Cage — each with unique effect
+- [x] Stun system + escape roll
+- [x] Trap interaction matrix wired to chicken AI
+- [x] Speech bubbles: `"I'M TRAPPED"`, `"I am the best at escape..."`
+- [x] Catch triggers when player adjacent to stunned chicken
 
-- [ ] `entities/trap.js` + `systems/trap-effects.js`
-- [ ] Net, Banana, Cage — each with unique effect
-- [ ] Stun system + escape roll
-- [ ] Trap interaction matrix wired to chicken AI
-- [ ] Speech bubbles: `"I'M TRAPPED"`, `"I am the best at escape..."`
-- [ ] Catch triggers when player adjacent to stunned chicken
+## M5 — Buildings & destruction  *(shipped)*
 
-## M5 — Buildings & destruction
+- [x] `entities/building.js` with hp + destroy animation
+- [x] Chicken AI `DESTROY` — pick nearest protectable, path, attack
+- [x] Destruction particles
+- [x] Lose condition: all buildings destroyed
+- [x] World 1 protectable roster
 
-- [ ] `entities/building.js` with hp + destroy animation
-- [ ] Chicken AI `DESTROY_NEAREST` — pick nearest protectable, path, attack
-- [ ] Destruction particles
-- [ ] Lose condition: all buildings destroyed
-- [ ] World 1 protectable roster
+## M6 — Rage, taunts, eggs  *(shipped)*
 
-## M6 — Rage, taunts, eggs
+- [x] Rage meter + addRage() (lives in `chicken.js`, no separate `systems/rage.js`)
+- [x] Egg projectile with arc trajectory
+- [x] Player stun on egg hit + screen shake
+- [x] Taunt system with rate-limited categories
+- [x] FINAL FORM visual treatment
 
-- [ ] `systems/rage.js`
-- [ ] Egg projectile with arc trajectory
-- [ ] Player stun on egg hit + screen shake
-- [ ] Taunt system with rate-limited categories
-- [ ] FINAL FORM visual treatment
+## M7 — Cats & burgers  *(shipped)*
 
-## M7 — Cats & burgers
+- [x] Pickup spawn system
+- [x] Cat entity — mandatory override priority, toss animation
+- [x] Burger pickup — buff state
+- [x] Player can pick up burger → Burger Bait trap
+- [x] Stats tracking
 
-- [ ] Pickup spawn system
-- [ ] Cat entity — `CHASE_CAT` override, toss animation
-- [ ] Burger pickup — buff state
-- [ ] Player can pick up burger → Burger Bait trap (bridge to M10)
-- [ ] Stats tracking
+## M8 — Farm complete  *(shipped)*
 
-## M8 — Farm complete
+- [x] Escape cutscene
+- [x] Score / stats screen
+- [x] `localStorage` save
+- [x] Menu → level select
 
-- [ ] Escape cutscene (backflip → moonwalk → dab)
-- [ ] Score / stats screen
-- [ ] `localStorage` save
-- [ ] Menu → level select
+## M9 — The Market (W2)  *(shipped)*
 
-## M9 — The Market (W2)
+- [x] Tilemap, protectables, cart-flipping animation
+- [x] Glue Pad + Corn Decoy traps
+- [x] Teleport cheat
+- [x] Overturned carts become obstacles
+- [x] W2 escape cutscene
 
-- [ ] Tilemap, protectables, cart-flipping animation
-- [ ] Glue Pad + Corn Decoy traps
-- [ ] Teleport cheat
-- [ ] Overturned carts become obstacles
-- [ ] W2 escape cutscene (orange tidal wave surf)
+## M10 — The Docks (W3)  *(shipped)*
 
-## M10 — The Docks (W3)
+- [x] Water tiles + Swim cheat
+- [x] Barrel platform mechanic
+- [x] Pretty Hen trap
+- [x] Burger Bait trap
+- [x] W3 escape cutscene
 
-- [ ] Water tiles + Swim cheat
-- [ ] Barrel platform mechanic
-- [ ] Pretty Hen trap
-- [ ] Burger Bait trap
-- [ ] W3 escape cutscene (speedboat donuts)
+## M11 — Castle Town (W4)  *(shipped)*
 
-## M11 — Castle Town (W4)
-
-- [ ] Maze-like castle layout (maybe scrolling camera — decide here)
-- [ ] Player-usable catapult
-- [ ] Cat Decoy trap
-- [ ] Clone decoy cheat
-- [ ] Crown sprite swap
-- [ ] W4 escape cutscene (catapult → hay cart → "FREEDOM")
+- [x] Castle layout (no scrolling — fits the 20×15 viewport)
+- [x] Player-usable catapult
+- [x] Cat Decoy trap
+- [x] Clone decoy cheat
+- [x] Crown sprite swap
+- [x] W4 escape cutscene
 
 ## M12 — The Volcano (W5) & ending  *(shipped)*
 
@@ -118,6 +116,21 @@ Goal: load Farm tilemap, move player around, see something on a real canvas.
 - [x] Swim-through-lava cheat (SWIM now covers WATER + LAVA)
 - [x] Final catch → `VOLCANO_VICTORY` cutscene (player hoists chump, confetti)
 - [x] Final **GAME COMPLETE** score screen + R to PLAY AGAIN
+
+## M13 — Polish pass  *(shipped)*
+
+- [x] Mobile touch d-pad + trap palette  *(virtual d-pad + pause + GO + tappable trap strip; touch-action:none on canvas; all menus tap-routed)*
+- [x] Sound — `src/audio/sfx.js` procedural Web Audio, lazy-inited on first gesture
+- [x] Audio pass 2 — peaks normalized across effects, master volume slider in settings (0..125%), two new effects (`spit_fire`, `cook_scream`)
+- [x] Settings (mute / volume / reduced motion / high contrast) persisted to localStorage
+- [x] Menu settings panel + in-chase pause overlay with the same toggles
+- [x] Accessibility: reduced-motion clamps particle counts + kills screen shake, high-contrast overlay adds vignette + border
+- [x] Headless regression harness  *(`tools/smoke.mjs` covers this; no separate sim.js)*
+- [x] Dist build: `tools/build.mjs` emits a single `dist/index.html` (~265 KB, no external deps)
+- [x] Menu juice, transitions, intro screen  *(staged title intro: title drops in, subtitle fades, Chump stomps in from off-screen right with dust puffs, list+settings slide in; diagonal orange wipe + banner on every state change via setState())*
+- [x] Spit-fire animation  *(new directional flame cone replaces egg-splat placeholder when Chump eats a taco)*
+- [x] Cook NPC  *(chef-hat sprite at the taco truck window on the Farm; flails and screams when Chump approaches)*
+- [ ] Performance audit  *(still deferred — nothing currently feels slow)*
 
 ## M14 — Comedy payload  *(shipped)*
 
@@ -135,20 +148,12 @@ Executive Clucks + Red Fox minions. The last "make it feel like Chump" layer.
 - [x] New SFX: `exec_order` (ceremonial thump), `supersonic`, `ice_throw`, `ice_hit`, `ice_splat`.
 - [x] New sprites: `fox_0` / `fox_1` (16×16 red-hat minion with red eye), `ice_cube` (8×8 pale-blue cube projectile).
 
-## M13 — Polish pass  *(shipped)*
+## M15 — Publishing  *(shipped)*
 
-- [x] Mobile touch d-pad + trap palette  *(virtual d-pad + pause + GO + tappable trap strip; touch-action:none on canvas; all menus tap-routed)*
-- [x] Sound — `src/audio/sfx.js` procedural Web Audio, lazy-inited on first gesture
-- [x] Audio pass 2 — peaks normalized across effects, master volume slider in settings (0..125%), two new effects (`spit_fire`, `cook_scream`)
-- [x] Settings (mute / volume / reduced motion / high contrast) persisted to localStorage
-- [x] Menu settings panel + in-chase pause overlay with the same toggles
-- [x] Accessibility: reduced-motion clamps particle counts + kills screen shake, high-contrast overlay adds vignette + border
-- [x] Headless regression harness  *(`tools/smoke.mjs` covers this; no separate sim.js)*
-- [x] Dist build: `tools/build.mjs` emits a single `dist/index.html` (~242 KB, no external deps)
-- [x] Menu juice, transitions, intro screen  *(staged title intro: title drops in, subtitle fades, Chump stomps in from off-screen right with dust puffs, list+settings slide in; diagonal orange wipe + banner on every state change via setState())*
-- [x] Spit-fire animation  *(new directional flame cone replaces egg-splat placeholder when Chump eats a taco)*
-- [x] Cook NPC  *(chef-hat sprite at the taco truck window on the Farm; flails and screams when Chump approaches)*
-- [ ] Performance audit  *(still deferred — nothing currently feels slow)*
+- [x] `docs/PUBLISHING.md` — GitHub Pages + itch.io paths
+- [x] Public name locked as **Chump Chicken Chase** (Trumplestiltskin = repo codename only)
+- [x] Title-screen subtitle, version stamp, meta tags, and Pages URL casing fixed
+- [x] Pre-publish audit pass — code health, brand, doc drift swept and reconciled
 
 ---
 
@@ -188,114 +193,37 @@ Chump into (or he baits townspeople into). Details TBD.
 
 ---
 
-## Design calls worth talking through
+## Resolved design calls
 
-These are real open questions with multiple viable answers. I'll present options and my lean, but the point is for us to decide together.
+The big design questions from the M0 brainstorming session, with what we actually shipped. Kept here as a record so we don't re-relitigate them next session.
 
-### 1. Art approach — the biggest question
+| # | Question | Resolution |
+|---|---|---|
+| 1 | Art approach (emoji / procedural / hybrid) | **Hybrid, leaning procedural.** Full-body procedural pixel-art sprites for Chump, player, foxes, NPCs, traps, pickups, projectiles. Emoji + procedural particles for chaos effects (fire, smoke, debris, goo, confetti). Sprites baked once at boot via `render/bake.js`. |
+| 2 | Scope (vibe demo / Farm MVP / full 5-world / polish) | **Full game + polish.** All 5 worlds shipped (M1-M12), polish pass (M13), comedy payload (M14), publishing (M15). v1 content-complete. |
+| 3 | Sound timing (M1 / M6 / M13 / skip) | **M13, then audio pass 2 in M13 ship.** Procedural Web Audio in `src/audio/sfx.js`, ~25 effects, master volume slider. Spoken taunts dropped — text-only is the direction. |
+| 4 | Distribution shape | **Modules in dev, single-file build for ship.** `tools/build.mjs` emits `dist/index.html` (~265 KB). GitHub Pages serves the repo root directly; itch.io takes the bundle. |
+| 5 | Real-time vs tick-based | **10Hz fixed tick + RAF render with interpolation.** Every duration in the codebase is in ticks. |
+| 6 | Grid size / resolution | **640×480** (20×15 × 32px). Static viewport, no scrolling needed in any world. |
+| 7 | Catch mechanic | **Touch stunned chicken.** Walk-into-stunned trigger. Never promoted past A — feels right as-is. |
+| 8 | Cutscene style | **Scripted procedural animations** with sprite tweening + text bubbles + screen effects. Big juice on W1 intro and W5 GAME COMPLETE; lighter on mid-game escapes. |
+| 9 | Mobile timing | **M13 ship pass.** Virtual d-pad, virtual buttons, tappable trap palette, all menus tap-routed. `touch-action: none` on the canvas. |
 
-You're providing no assets, so every visual comes from code. Three paths:
+## Resolved smaller calls
 
-**A. Full emoji.** Whole game renders as emoji glyphs on a grid. Chicken = 🐔, player = 🧑‍🌾, barn = 🏚️, fire = 🔥, burger = 🍔, eggs = 🥚, cat = 🐈. Your README is already emoji-native — the design practically wrote this for us.
-- *Pros*: zero art work, ships fastest, instantly readable, works everywhere, dead-simple iteration.
-- *Cons*: emoji look slightly different per OS (Apple's chicken ≠ Google's chicken), less custom feel, some layout fiddliness.
+- **Multiple cats/hens on map**: cap at 1 at a time
+- **Trap inventory**: fixed per-world count, no replenishment during chase
+- **Egg throw cooldown**: tuned per-world, base ~4s
+- **Final Form duration**: 50 ticks (5s)
+- **Title on screen**: "CHUMP CHICKEN CHASE" with "CHASE THE ORANGE MENACE" tagline subtitle
+- **Difficulty curve**: easy W1, ramps from W3, peak chaos in W5 (rocks + lava + final form + flaming eggs + executive orders)
+- **Color palette**: hand-tuned procedural palette in `render/palette.js` (didn't end up needing PICO-8 specifically)
 
-**B. Procedural pixel art.** I author every sprite as numeric grids with palettes, pre-render to offscreen canvases.
-- *Pros*: consistent across platforms, true pixel-art feel, custom personality.
-- *Cons*: slow to author (character animation especially), runs the risk of looking programmer-arty, big time sink per world.
+## Risks (historical — kept for the record)
 
-**C. Hybrid.** Procedural pixel art for tiles + player + chicken (need consistent look/animation). Emoji for everything else — pickups, particles, destruction effects, cutscenes.
-- *Pros*: consistent characters, zero-effort props, smaller art budget.
-- *Cons*: needs to feel cohesive across two styles.
+These were called out at M0 and all of them played out:
 
-**My lean**: **Start with full emoji (A)** for the vibe demo. If it feels right, ship that. If the chicken doesn't feel punchy enough as 🐔, promote him + player to procedural sprites while keeping everything else emoji (→ C). The pure-emoji version is dramatically faster to playable and might honestly be the funniest version of the game.
-
-### 2. Scope — how much of the 5-world vision, and when?
-
-- **Tier 1 — Vibe Demo**: World 1 only, basic chicken AI, 3 traps, working chase, chicken talks smack, one catch ends it. ~M1-M4. Proves the feel.
-- **Tier 2 — Farm MVP**: Tier 1 + buildings/destruction, rage/eggs, cat/burger spawns, escape cutscene, save state. ~M1-M8. A complete, replayable W1 experience.
-- **Tier 3 — Full Game**: All 5 worlds + ending. M1-M12.
-- **Tier 4 — Polish**: M13.
-
-**My lean**: Commit to Tier 2 as the near-term target. If the Farm feels great, push to Tier 3. Shipping a great Farm is way better than shipping a mediocre 5-world game.
-
-### 3. Sound — in from the start, or polish only?
-
-- **A. From M1**: ~100 lines of Web Audio procedural synth (squawks, splats, snaps, footsteps). Zero assets. Games without sound feel dead.
-- **B. From M6**: Add when rage/eggs land so new mechanics have audio feedback.
-- **C. M13**: Ship silent until polish.
-
-**Bonus**: `SpeechSynthesis` API for spoken taunts — browser literally speaks "Quiet, piggy" in a silly voice. Cross-platform but voices vary. Easy to try, easy to rip out.
-
-**My lean**: Sound from M1 even if minimal, because silent games feel flat. Spoken taunts experiment in M6 — fun gamble.
-
-### 4. Distribution — what's the shippable artifact?
-
-- **A. Single `index.html`**, everything inline. Double-clickable, email-able, host-anywhere. Annoying for dev.
-- **B. Served folder** with `src/` modules. Iterable but needs a static host (GitHub Pages is free).
-- **C. Dev as modules, ship as single file** via tiny Node concat script (~20 lines, no deps). Best of both.
-
-**My lean**: **C**. You get a `dist/index.html` you can share anywhere, and I get clean iterable modules. If the build script ever becomes friction, we collapse to A.
-
-**Hosting**: once we have a `dist/index.html`, GitHub Pages is the no-effort default — it's already a GitHub repo and publishing is one button.
-
-### 5. Real-time vs tick-based logic
-
-- **A. 10Hz fixed tick + interpolated render**. Grid-snappy, integer balance ("stun 3 ticks"), easy headless sim.
-- **B. Continuous real-time** (60fps, everything in seconds). Smoother, harder to sim deterministically.
-- **C. Hybrid**: chicken + player move continuously in pixel space, traps/placement tile-bound. Most fluid, pathing harder.
-
-**My lean**: **A** — the game is grid-based by design and the README thinks in ticks. 10Hz is plenty snappy when render is smooth.
-
-### 6. Grid size / resolution
-
-- **640×480** (20×15 × 32px) — retro 4:3, classic
-- **800×600** (25×18 × 32px) — more room, same vibe
-- **480×360** (15×11 × 32px) — tighter chase feel
-
-**My lean**: 640×480. Room for protectables + chase without feeling cluttered. If we go full-emoji, bigger tiles (48px) read better.
-
-### 7. Catch mechanic
-
-- **A. Touch stunned chicken** — walk into him while caught in a trap = catch. Simple.
-- **B. Throw a lasso** — button press in-range, higher success when stunned. Adds skill.
-- **C. Place a "capture" trap on a stunned chicken** — more ceremony, more strategy.
-
-**My lean**: **A** for simplicity; promote to B if catching feels too trivial.
-
-### 8. Cutscenes — since we have no assets
-
-- **A. Scripted emoji animations** — chicken emoji slides across the screen doing a dab, text bubbles, screen flashes. Matches the vibe, zero assets.
-- **B. Keyframe-style static scenes** with floating text. Lighter work.
-- **C. Mix**: scripted emoji tweens for W1 intro + W5 ending, keyframe style for mid-game escapes.
-
-**My lean**: **C**. Big juice on the bookends, lighter in the middle.
-
-### 9. Mobile — when?
-
-- **A. M1** — design mobile-first from day one
-- **B. Mid-game** (~M6/M7) — once core loop is stable
-- **C. M13 polish** — desktop-first, mobile last
-
-**My lean**: **B**. Desktop-first is risk-reduction, but leaving mobile to the very end usually means it ships half-broken.
-
----
-
-## Smaller calls (I'll pick defaults if you don't care)
-
-- **Multiple cats/hens on map**: cap at 1 at a time, or allow stacking chaos?
-- **Trap inventory**: fixed per-world count, or replenishable over chase time?
-- **Egg throw cooldown**: default ~4s
-- **Final Form duration**: default ~5s
-- **Title on screen**: *resolved* — "CHUMP CHICKEN CHASE" with "CHASE THE ORANGE MENACE" tagline subtitle
-- **Difficulty curve**: easy W1 for vibe, ramp from W3?
-- **Color palette** (if we go procedural): leaning PICO-8 16-color (iconic, free, looks great).
-
----
-
-## Risks I'm flagging early
-
-- **Chicken AI is the central risk.** Behavior tree + cheats + rage + distractions + taunts is a lot of state. Mitigation: build incrementally across milestones, not in one shot.
-- **Art scope creep.** If we go procedural, animation is a real time sink. Full-emoji sidesteps this entirely.
-- **Unbounded particles + goo + fire** can tank perf. Pool everything, profile early.
-- **Feel IS the product.** Leave real time for taunts, bubble timing, and cutscene choreography — don't rush the personality work.
+- **Chicken AI complexity** — managed by building incrementally across M2/M4/M6/M7 milestones rather than all at once. Final state has rage + cheats + 4 cheat modifiers + 4 executive orders + taunts + lure pathfind. Lives in one file (`chicken.js`) and is still readable.
+- **Art scope creep** — real, but managed by baking at boot and reusing sprite keys. 33 modules, no pixel-art file ever broke 300 lines.
+- **Particles + goo + fire perf** — handled with pooled arrays in `systems/particles.js`. Reduced-motion mode clamps the cap from ~300 to ~120. No perf complaints to date.
+- **Feel IS the product** — held. Taunt cadence, signing ceremony, screen wipes, transition banners, intro animation all got real time. The bratty personality made it through.
