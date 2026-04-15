@@ -1,7 +1,7 @@
 # Chump Chicken Chase
 Chase a chaotic orange chicken around to save the town.
 
-*(Project codename: Trumplestiltskin.)*
+
 
 **Play it:** open `index.html` via any static server, or [play it on GitHub Pages](https://tamryn72.github.io/Trumplestiltskin/).
 
